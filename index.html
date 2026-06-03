@@ -49,21 +49,45 @@
     @keyframes badgePop{from{transform:scale(0)}to{transform:scale(1)}}
 
     /* ── OVERLAY ── */
-    .alert-overlay{position:fixed;inset:0;z-index:200;opacity:0;pointer-events:none}
+    .alert-overlay{position:fixed;inset:0;z-index:200;opacity:0;pointer-events:none;background:rgba(5,13,26,.6);backdrop-filter:blur(2px)}
     .alert-overlay.open{opacity:1;pointer-events:all}
 
     /* ── BALÃO VERMELHO ── */
-    .alert-balloon{position:fixed;top:74px;right:24px;width:340px;max-width:calc(100vw - 32px);background:linear-gradient(160deg,#2a0808 0%,#1a0404 100%);border:1.5px solid rgba(224,92,92,.55);border-radius:14px;box-shadow:0 8px 48px rgba(224,92,92,.35),0 2px 16px rgba(0,0,0,.7);z-index:201;display:none;flex-direction:column;overflow:hidden;animation:balloonPop .25s cubic-bezier(.34,1.56,.64,1);transform-origin:top right}
+    .alert-balloon{
+      position:fixed;top:74px;right:24px;
+      width:360px;max-width:calc(100vw - 32px);
+      background:linear-gradient(160deg,#2a0808 0%,#1a0404 100%);
+      border:1.5px solid rgba(224,92,92,.55);border-radius:14px;
+      box-shadow:0 8px 48px rgba(224,92,92,.35),0 2px 16px rgba(0,0,0,.7);
+      z-index:201;display:none;flex-direction:column;overflow:hidden;
+      animation:balloonPop .25s cubic-bezier(.34,1.56,.64,1);transform-origin:top right;
+      max-height:calc(100vh - 100px)
+    }
     .alert-balloon.open{display:flex}
     @keyframes balloonPop{from{opacity:0;transform:scale(.88)}to{opacity:1;transform:scale(1)}}
     .alert-balloon::before{content:'';position:absolute;top:-8px;right:18px;width:14px;height:14px;background:#2a0808;border-top:1.5px solid rgba(224,92,92,.55);border-left:1.5px solid rgba(224,92,92,.55);transform:rotate(45deg);border-radius:2px 0 0 0}
+
+    /* Mobile: centraliza como modal */
+    @media(max-width:600px){
+      .alert-balloon{
+        top:50%;left:50%;right:auto;
+        transform:translateX(-50%) translateY(-50%);
+        width:calc(100vw - 24px);max-width:420px;
+        max-height:calc(100vh - 80px);
+        transform-origin:center center
+      }
+      .alert-balloon.open{display:flex}
+      .alert-balloon::before{display:none}
+      @keyframes balloonPop{from{opacity:0;transform:translateX(-50%) translateY(-46%) scale(.9)}to{opacity:1;transform:translateX(-50%) translateY(-50%) scale(1)}}
+    }
+
     .balloon-header{background:linear-gradient(90deg,rgba(224,92,92,.22) 0%,rgba(224,92,92,.08) 100%);border-bottom:1px solid rgba(224,92,92,.25);padding:12px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0}
     .balloon-header-icon{font-size:1rem;line-height:1;flex-shrink:0}
     .balloon-header-title{font-family:'Orbitron',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:2px;color:#ffaaaa;flex:1}
     .balloon-header-count{background:var(--danger);color:#fff;font-family:'Orbitron',sans-serif;font-size:.55rem;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0}
     .balloon-close{background:none;border:none;color:rgba(255,150,150,.5);font-size:1rem;cursor:pointer;padding:2px 4px;line-height:1;transition:color .2s;flex-shrink:0}
     .balloon-close:hover{color:#ffaaaa}
-    .balloon-body{max-height:340px;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+    .balloon-body{overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:8px;flex:1}
     .balloon-body::-webkit-scrollbar{width:3px}
     .balloon-body::-webkit-scrollbar-thumb{background:rgba(224,92,92,.3);border-radius:2px}
     .balloon-footer{padding:9px 14px;border-top:1px solid rgba(224,92,92,.15);font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,150,150,.45);text-align:center;flex-shrink:0}
@@ -249,16 +273,6 @@
     .svc-cards{display:flex;flex-direction:column;gap:10px}
     .svc-card{background:var(--surface2);border:1px solid rgba(0,200,248,.12);border-radius:12px;overflow:hidden;transition:border-color .2s,box-shadow .2s;animation:fadeSlide .2s ease}
     .svc-card:hover{border-color:rgba(0,200,248,.28);box-shadow:0 4px 20px rgba(0,0,0,.4)}
-    /* ── CARD PENDENTE ── */
-    .svc-card.pendente{background:linear-gradient(160deg,rgba(240,165,0,.18) 0%,rgba(200,120,0,.12) 100%);border:1.5px solid rgba(240,165,0,.5);box-shadow:0 0 18px rgba(240,165,0,.15),0 4px 16px rgba(0,0,0,.4)}
-    .svc-card.pendente:hover{border-color:rgba(240,165,0,.75);box-shadow:0 0 28px rgba(240,165,0,.28),0 4px 20px rgba(0,0,0,.5)}
-    .svc-card.pendente .svc-card-top{border-bottom:1px solid rgba(240,165,0,.18);background:rgba(240,165,0,.06)}
-    .svc-card.pendente .svc-card-bottom{border-top:1px solid rgba(240,165,0,.15)}
-    .svc-card.pendente .svc-card-label{color:rgba(240,165,0,.65)}
-    .svc-card.pendente .svc-card-client{color:#ffe08a}
-    /* pulso sutil na borda do card pendente */
-    @keyframes pendentePulse{0%,100%{box-shadow:0 0 14px rgba(240,165,0,.15),0 4px 16px rgba(0,0,0,.4)}50%{box-shadow:0 0 28px rgba(240,165,0,.35),0 4px 20px rgba(0,0,0,.5)}}
-    .svc-card.pendente{animation:fadeSlide .2s ease,pendentePulse 2.8s ease-in-out infinite}
     .svc-card-top{display:flex;align-items:center;gap:10px;padding:12px 14px 9px;border-bottom:1px solid rgba(0,200,248,.07)}
     .svc-card-client{font-family:'Rajdhani',sans-serif;font-size:.88rem;font-weight:700;color:var(--white);letter-spacing:.5px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .svc-card-type{font-family:'Rajdhani',sans-serif;font-size:.6rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--cyan);background:rgba(0,200,248,.09);border:1px solid rgba(0,200,248,.18);border-radius:4px;padding:2px 8px;white-space:nowrap;flex-shrink:0}
@@ -281,6 +295,55 @@
     .svc-card-vagas-fill.empty{background:var(--danger)}
     .svc-card-vagas-txt{font-family:'Orbitron',sans-serif;font-size:.58rem;font-weight:700;color:var(--muted)}
     .svc-card-loc{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+
+    /* ── PEOPLE CARDS (clientes + supervisores) ── */
+    .ppl-cards{display:flex;flex-direction:column;gap:10px}
+    .ppl-card{background:var(--surface2);border:1px solid rgba(0,200,248,.12);border-radius:12px;overflow:hidden;transition:border-color .2s,box-shadow .2s;animation:fadeSlide .2s ease}
+    .ppl-card:hover{border-color:rgba(0,200,248,.28);box-shadow:0 4px 20px rgba(0,0,0,.4)}
+    .ppl-card-top{display:flex;align-items:center;gap:10px;padding:12px 14px 10px}
+    .ppl-card-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--blue2),var(--cyan));display:flex;align-items:center;justify-content:center;font-family:'Orbitron',sans-serif;font-size:.75rem;font-weight:700;color:var(--navy);flex-shrink:0}
+    .ppl-card-avatar.sup{background:linear-gradient(135deg,#2a5c3a,var(--success))}
+    .ppl-card-info{flex:1;min-width:0}
+    .ppl-card-name{font-family:'Rajdhani',sans-serif;font-size:.9rem;font-weight:700;color:var(--white);letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .ppl-card-sub{font-size:11.5px;color:var(--muted);margin-top:1px}
+    .ppl-card-badge{font-family:'Rajdhani',sans-serif;font-size:.58rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;padding:3px 9px;border-radius:4px;white-space:nowrap;flex-shrink:0}
+    .ppl-card-badge.role-sup{background:rgba(63,207,142,.1);border:1px solid rgba(63,207,142,.25);color:var(--success)}
+    .ppl-card-badge.role-coord{background:rgba(0,200,248,.1);border:1px solid rgba(0,200,248,.25);color:var(--cyan2)}
+    .ppl-card-badge.role-ger{background:rgba(240,165,0,.1);border:1px solid rgba(240,165,0,.25);color:var(--warn)}
+    .ppl-card-body{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;padding:0 14px 8px;border-top:1px solid rgba(0,200,248,.07);padding-top:9px}
+    .ppl-card-field{display:flex;flex-direction:column;gap:1px}
+    .ppl-card-label{font-family:'Rajdhani',sans-serif;font-size:.55rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+    .ppl-card-val{font-size:12.5px;color:var(--text)}
+    .ppl-card-val a{color:var(--cyan);text-decoration:none}
+    .ppl-card-footer{display:flex;align-items:center;justify-content:space-between;padding:7px 14px 10px;border-top:1px solid rgba(0,200,248,.07);gap:8px}
+    .ppl-card-mat{font-family:'Orbitron',sans-serif;font-size:.55rem;font-weight:700;letter-spacing:1px;color:var(--cyan);opacity:.7}
+    .ppl-card-actions{display:flex;gap:6px}
+    .ppl-card-actions button{background:none;border:1px solid rgba(0,200,248,.15);border-radius:6px;color:var(--muted);font-size:.75rem;cursor:pointer;padding:5px 13px;transition:all .18s;font-family:'Rajdhani',sans-serif;font-weight:600;letter-spacing:.5px}
+    .ppl-card-actions button:hover{background:rgba(0,200,248,.08);border-color:var(--cyan);color:var(--cyan)}
+    .ppl-card-actions button.del:hover{background:rgba(224,92,92,.08);border-color:var(--danger);color:var(--danger)}
+
+    /* ── ESCALA SELECTOR ── */
+    .escala-wrap{display:flex;gap:8px;margin-top:4px}
+    .escala-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;background:var(--surface2);border:1px solid rgba(0,200,248,.12);border-radius:var(--radius);padding:10px 8px;cursor:pointer;transition:all .2s;user-select:none;position:relative}
+    .escala-btn:hover{border-color:rgba(0,200,248,.3)}
+    .escala-btn .escala-dot{width:8px;height:8px;border-radius:50%;border:2px solid var(--muted);background:transparent;flex-shrink:0;transition:all .2s}
+    .escala-btn .escala-label{font-family:'Rajdhani',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);transition:color .2s}
+    .escala-btn .escala-icon{font-size:.9rem;opacity:.5;transition:opacity .2s}
+    /* PAR — azul ciano */
+    .escala-btn[data-val="par"].active{background:rgba(0,200,248,.1);border-color:var(--cyan);box-shadow:0 0 12px rgba(0,200,248,.15)}
+    .escala-btn[data-val="par"].active .escala-dot{background:var(--cyan2);border-color:var(--cyan2);box-shadow:0 0 6px var(--cyan2)}
+    .escala-btn[data-val="par"].active .escala-label{color:var(--cyan2)}
+    .escala-btn[data-val="par"].active .escala-icon{opacity:1}
+    /* ÍMPAR — amarelo âmbar */
+    .escala-btn[data-val="impar"].active{background:rgba(240,165,0,.1);border-color:var(--warn);box-shadow:0 0 12px rgba(240,165,0,.15)}
+    .escala-btn[data-val="impar"].active .escala-dot{background:var(--warn);border-color:var(--warn);box-shadow:0 0 6px var(--warn)}
+    .escala-btn[data-val="impar"].active .escala-label{color:var(--warn)}
+    .escala-btn[data-val="impar"].active .escala-icon{opacity:1}
+    /* TODO — verde */
+    .escala-btn[data-val="todo"].active{background:rgba(63,207,142,.1);border-color:var(--success);box-shadow:0 0 12px rgba(63,207,142,.15)}
+    .escala-btn[data-val="todo"].active .escala-dot{background:var(--success);border-color:var(--success);box-shadow:0 0 6px var(--success)}
+    .escala-btn[data-val="todo"].active .escala-label{color:var(--success)}
+    .escala-btn[data-val="todo"].active .escala-icon{opacity:1}
 
     /* modal genérico reutilizável */
     #modal-supervisor .modal-box,#modal-service-view .modal-box{max-width:540px}
@@ -508,6 +571,27 @@
           <button type="button" class="add-day-btn" onclick="addDaySchedule()"><span>＋</span> Adicionar dia com horário diferente</button>
         </div>
       </div>
+      <!-- ESCALA -->
+      <div class="field" style="margin-top:16px">
+        <label>Escala de rodízio</label>
+        <div class="escala-wrap" id="escala-wrap">
+          <div class="escala-btn" data-val="par" onclick="selectEscala('par')">
+            <span class="escala-dot"></span>
+            <span class="escala-icon">☀️</span>
+            <span class="escala-label">Par</span>
+          </div>
+          <div class="escala-btn" data-val="impar" onclick="selectEscala('impar')">
+            <span class="escala-dot"></span>
+            <span class="escala-icon">🌙</span>
+            <span class="escala-label">Ímpar</span>
+          </div>
+          <div class="escala-btn active" data-val="todo" onclick="selectEscala('todo')">
+            <span class="escala-dot"></span>
+            <span class="escala-icon">✅</span>
+            <span class="escala-label">Todo</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- 4. EQUIPE E REMUNERAÇÃO -->
@@ -659,18 +743,7 @@
               <button type="button" class="btn-primary" style="font-size:.58rem;padding:8px 16px" onclick="openClientModal()">+ Novo</button>
             </div>
           </div>
-          <div class="db-overflow">
-            <table class="db-table" id="db-table-clients">
-              <thead><tr>
-                <th>Nome / Razão social</th>
-                <th>CNPJ / CPF</th>
-                <th>Contato</th>
-                <th>Telefone</th>
-                <th></th>
-              </tr></thead>
-              <tbody id="db-body-clients"></tbody>
-            </table>
-          </div>
+          <div class="ppl-cards" id="clients-cards-list"></div>
         </div>
 
         <!-- SUPERVISORES -->
@@ -682,19 +755,7 @@
               <button type="button" class="btn-primary" style="font-size:.58rem;padding:8px 16px" onclick="openSupervisorModal()">+ Novo</button>
             </div>
           </div>
-          <div class="db-overflow">
-            <table class="db-table">
-              <thead><tr>
-                <th>Nome</th>
-                <th>CPF</th>
-                <th>Telefone</th>
-                <th>E-mail</th>
-                <th>Cargo</th>
-                <th></th>
-              </tr></thead>
-              <tbody id="db-body-supervisors"></tbody>
-            </table>
-          </div>
+          <div class="ppl-cards" id="supervisors-cards-list"></div>
         </div>
 
         <!-- SERVIÇOS LANÇADOS -->
@@ -1059,6 +1120,7 @@ function closeBalloon(){
 
 function renderBalloon(list){
   const fmt = d => d ? new Date(d+'T00:00:00').toLocaleDateString('pt-BR') : '—';
+  const escalaMap = {par:'☀️ Par', impar:'🌙 Ímpar', todo:'✅ Todo'};
   // Monta opções de supervisores cadastrados
   const supOptions = supervisors.length
     ? supervisors.map(s => `<option value="${s.name}">${s.name}${s.role?' — '+s.role:''}</option>`).join('')
@@ -1071,6 +1133,7 @@ function renderBalloon(list){
         <span class="balert-tag">📍 ${svc.location||'—'}</span>
         <span class="balert-tag">👥 ${svc.vagas} vaga(s)</span>
         <span class="balert-tag">💰 R$ ${svc.payCollab.toLocaleString('pt-BR',{minimumFractionDigits:2})} / colab</span>
+        <span class="balert-tag">🔄 Escala: ${escalaMap[svc.escala||'todo']}</span>
       </div>
       <div class="balert-sup-wrap">
         <span class="balert-sup-label">🎖 Supervisor que fez a cobertura *</span>
@@ -1360,6 +1423,16 @@ function selectPill(el, group){
   el.classList.add('selected');
 }
 
+function selectEscala(val){
+  document.querySelectorAll('#escala-wrap .escala-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`#escala-wrap [data-val="${val}"]`)?.classList.add('active');
+}
+
+function getEscala(){
+  const active = document.querySelector('#escala-wrap .escala-btn.active');
+  return active ? active.dataset.val : 'todo';
+}
+
 // ══════════════════════════════════════════
 // RESUMO
 // ══════════════════════════════════════════
@@ -1413,6 +1486,7 @@ function resetForm(){
 
   document.getElementById('submit-summary').innerHTML = 'Preencha os campos obrigatórios para lançar o serviço.';
   document.querySelectorAll('.pill').forEach(p => p.classList.remove('selected'));
+  selectEscala('todo');
   document.querySelectorAll('.invalid').forEach(el => el.classList.remove('invalid'));
   document.querySelectorAll('.field-error').forEach(el => { el.style.display='none'; el.textContent='Campo obrigatório'; });
 
@@ -1482,6 +1556,7 @@ document.getElementById('service-form').addEventListener('submit', function(e){
     dateEnd:      document.getElementById('date-end').value,
     timeStart:    document.getElementById('time-start').value,
     timeEnd:      document.getElementById('time-end').value,
+    escala:       getEscala(),
     vagas,        coberturas:0, coverObs:'', coverDetails:[],
     payCollab:    parseFloat(document.getElementById('pay-collab').value)||0,
     payCollabType:document.getElementById('pay-collab-type').value,
@@ -1663,22 +1738,46 @@ function renderClients(){
     (c.contact||'').toLowerCase().includes(q)
   );
   document.getElementById('db-count-clients').textContent = list.length+' registro(s)';
-  const tbody = document.getElementById('db-body-clients');
+  const container = document.getElementById('clients-cards-list');
   if(!list.length){
-    tbody.innerHTML = `<tr><td colspan="5" class="db-empty">Nenhum cliente cadastrado</td></tr>`;
+    container.innerHTML = `<div class="db-empty">Nenhum cliente cadastrado</div>`;
     return;
   }
-  tbody.innerHTML = list.map(c => `
-    <tr>
-      <td><strong style="color:var(--white)">${c.name}</strong>${c.obs?`<br/><span style="font-size:11px;color:var(--muted)">${c.obs}</span>`:''}</td>
-      <td style="color:var(--muted)">${c.doc||'—'}</td>
-      <td>${c.contact||'—'}</td>
-      <td>${c.phone||'—'}</td>
-      <td class="td-actions">
-        <button onclick="editClient(${c.id})" title="Editar">✏️</button>
-        <button class="del" onclick="deleteClient(${c.id})" title="Excluir">🗑</button>
-      </td>
-    </tr>`).join('');
+  container.innerHTML = list.map(c => {
+    const initials = c.name.trim().split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+    return `
+    <div class="ppl-card">
+      <div class="ppl-card-top">
+        <div class="ppl-card-avatar">${initials}</div>
+        <div class="ppl-card-info">
+          <div class="ppl-card-name">${c.name}</div>
+          ${c.doc?`<div class="ppl-card-sub">${c.doc}</div>`:''}
+        </div>
+        ${c.obs?`<span class="ppl-card-badge role-coord" title="${c.obs}">OBS</span>`:''}
+      </div>
+      <div class="ppl-card-body">
+        <div class="ppl-card-field">
+          <div class="ppl-card-label">👤 Contato</div>
+          <div class="ppl-card-val">${c.contact||'—'}</div>
+        </div>
+        <div class="ppl-card-field">
+          <div class="ppl-card-label">📞 Telefone</div>
+          <div class="ppl-card-val">${c.phone?`<a href="tel:${c.phone}">${c.phone}</a>`:'—'}</div>
+        </div>
+        ${c.obs?`<div class="ppl-card-field" style="grid-column:1/-1">
+          <div class="ppl-card-label">📝 Observação</div>
+          <div class="ppl-card-val" style="color:var(--muted)">${c.obs}</div>
+        </div>`:''}
+      </div>
+      <div class="ppl-card-footer">
+        <span class="ppl-card-mat">ID #${String(c.id).slice(-4)}</span>
+        <div class="ppl-card-actions">
+          <button onclick="editClient(${c.id})">✏️ Editar</button>
+          <button class="del" onclick="deleteClient(${c.id})">🗑</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function editClient(id){
@@ -1714,23 +1813,52 @@ function renderSupervisors(){
     (s.role||'').toLowerCase().includes(q)
   );
   document.getElementById('db-count-supervisors').textContent = list.length+' registro(s)';
-  const tbody = document.getElementById('db-body-supervisors');
+  const container = document.getElementById('supervisors-cards-list');
   if(!list.length){
-    tbody.innerHTML = `<tr><td colspan="6" class="db-empty">Nenhum supervisor cadastrado</td></tr>`;
+    container.innerHTML = `<div class="db-empty">Nenhum supervisor cadastrado</div>`;
     return;
   }
-  tbody.innerHTML = list.map(s => `
-    <tr>
-      <td><strong style="color:var(--white)">${s.name}</strong>${s.mat?` <span style="font-size:11px;color:var(--cyan);margin-left:6px">${s.mat}</span>`:''}</td>
-      <td style="color:var(--muted)">${s.cpf||'—'}</td>
-      <td>${s.phone||'—'}</td>
-      <td>${s.email||'—'}</td>
-      <td>${s.role||'—'}</td>
-      <td class="td-actions">
-        <button onclick="editSupervisor(${s.id})" title="Editar">✏️</button>
-        <button class="del" onclick="deleteSupervisor(${s.id})" title="Excluir">🗑</button>
-      </td>
-    </tr>`).join('');
+  const roleBadge = role => {
+    if(!role) return '';
+    const r = role.toLowerCase();
+    const cls = r.includes('gerente')||r.includes('coordenador') ? (r.includes('gerente')?'role-ger':'role-coord') : 'role-sup';
+    return `<span class="ppl-card-badge ${cls}">${role}</span>`;
+  };
+  container.innerHTML = list.map(s => {
+    const initials = s.name.trim().split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+    return `
+    <div class="ppl-card">
+      <div class="ppl-card-top">
+        <div class="ppl-card-avatar sup">${initials}</div>
+        <div class="ppl-card-info">
+          <div class="ppl-card-name">${s.name}</div>
+          ${s.cpf?`<div class="ppl-card-sub">CPF: ${s.cpf}</div>`:''}
+        </div>
+        ${roleBadge(s.role)}
+      </div>
+      <div class="ppl-card-body">
+        <div class="ppl-card-field">
+          <div class="ppl-card-label">📞 Telefone</div>
+          <div class="ppl-card-val">${s.phone?`<a href="tel:${s.phone}">${s.phone}</a>`:'—'}</div>
+        </div>
+        <div class="ppl-card-field">
+          <div class="ppl-card-label">✉️ E-mail</div>
+          <div class="ppl-card-val">${s.email?`<a href="mailto:${s.email}">${s.email}</a>`:'—'}</div>
+        </div>
+        ${s.obs?`<div class="ppl-card-field" style="grid-column:1/-1">
+          <div class="ppl-card-label">📝 Observação</div>
+          <div class="ppl-card-val" style="color:var(--muted)">${s.obs}</div>
+        </div>`:''}
+      </div>
+      <div class="ppl-card-footer">
+        <span class="ppl-card-mat">${s.mat||'SEM MATRÍCULA'}</span>
+        <div class="ppl-card-actions">
+          <button onclick="editSupervisor(${s.id})">✏️ Editar</button>
+          <button class="del" onclick="deleteSupervisor(${s.id})">🗑</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 let editingSupId = null;
@@ -1840,9 +1968,10 @@ function renderServices(){
     const fillCls=cob>=vag?'full':cob>0?'partial':'empty';
     const payVal=s.payClient?'R$ '+(s.payClient).toLocaleString('pt-BR',{minimumFractionDigits:2}):'—';
     const periodo=s.dateStart?(fmt(s.dateStart)+(s.dateEnd&&s.dateEnd!==s.dateStart?' → '+fmt(s.dateEnd):'')):'—';
-    const isPending = s.status !== 'done' && s.status !== 'partial';
+    const escalaMap={par:{label:'Par',icon:'☀️',color:'var(--cyan2)',bg:'rgba(0,200,248,.1)',border:'rgba(0,200,248,.25)'},impar:{label:'Ímpar',icon:'🌙',color:'var(--warn)',bg:'rgba(240,165,0,.1)',border:'rgba(240,165,0,.25)'},todo:{label:'Todo',icon:'✅',color:'var(--success)',bg:'rgba(63,207,142,.1)',border:'rgba(63,207,142,.25)'}};
+    const esc=escalaMap[s.escala||'todo'];
     return `
-    <div class="svc-card${isPending?' pendente':''}">
+    <div class="svc-card">
       <div class="svc-card-top">
         <div class="svc-card-client" title="${s.client}">${s.client}</div>
         ${s.service?`<div class="svc-card-type">${s.service}</div>`:''}
@@ -1871,9 +2000,12 @@ function renderServices(){
         </div>
       </div>
       <div class="svc-card-bottom">
-        <div class="svc-card-vagas">
-          <div class="svc-card-vagas-bar"><div class="svc-card-vagas-fill ${fillCls}" style="width:${pct}%"></div></div>
-          <div class="svc-card-vagas-txt">${cob}/${vag} vaga${vag!==1?'s':''}</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="svc-card-vagas">
+            <div class="svc-card-vagas-bar"><div class="svc-card-vagas-fill ${fillCls}" style="width:${pct}%"></div></div>
+            <div class="svc-card-vagas-txt">${cob}/${vag} vaga${vag!==1?'s':''}</div>
+          </div>
+          <span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 9px;border-radius:4px;background:${esc.bg};border:1px solid ${esc.border};color:${esc.color}">${esc.icon} ${esc.label}</span>
         </div>
         <div class="svc-card-actions">
           <button onclick="viewService(${s.id})" title="Ver detalhes">👁 Ver</button>
@@ -1895,6 +2027,7 @@ function viewService(id){
       <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Local</span><div style="margin-top:3px">${s.location||'—'}</div></div>
       <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Período</span><div style="margin-top:3px">${fmt(s.dateStart)} → ${fmt(s.dateEnd)}</div></div>
       <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Horário</span><div style="margin-top:3px">${s.timeStart||'—'} – ${s.timeEnd||'—'}</div></div>
+      <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Escala de Rodízio</span><div style="margin-top:4px">${(()=>{const m={par:{label:'Par',icon:'☀️',color:'var(--cyan2)'},impar:{label:'Ímpar',icon:'🌙',color:'var(--warn)'},todo:{label:'Todo',icon:'✅',color:'var(--success)'}};const e=m[s.escala||'todo'];return `<span style="font-weight:700;color:${e.color}">${e.icon} ${e.label}</span>`;})()}</div></div>
       <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Vagas / Cobertura</span><div style="color:var(--cyan);margin-top:3px">${s.coberturas||0} / ${s.vagas||1}</div></div>
       <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Valor cliente</span><div style="color:var(--accent);margin-top:3px">R$ ${(s.payClient||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</div></div>
       <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Valor colaborador</span><div style="margin-top:3px">R$ ${(s.payCollab||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</div></div>
