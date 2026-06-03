@@ -486,20 +486,14 @@
         <div class="section-num">1</div>
         <h2 class="section-title">Cliente</h2>
       </div>
-      <div class="grid-2">
-        <div class="field">
-          <label>Nome do cliente <span class="req">*</span></label>
-          <div class="ac-wrap">
-            <input type="text" id="client-name" placeholder="Digite para buscar ou cadastrar…" required autocomplete="new-password"
-              oninput="acInput(this)" onkeydown="acKeydown(event)" onblur="acBlur()"/>
-            <div class="ac-dropdown" id="ac-dropdown"></div>
-          </div>
-          <span class="field-error" id="err-client">Campo obrigatório</span>
+      <div class="field">
+        <label>Nome do cliente <span class="req">*</span></label>
+        <div class="ac-wrap">
+          <input type="text" id="client-name" placeholder="Digite para buscar ou cadastrar…" required autocomplete="new-password"
+            oninput="acInput(this)" onkeydown="acKeydown(event)" onblur="acBlur()"/>
+          <div class="ac-dropdown" id="ac-dropdown"></div>
         </div>
-        <div class="field">
-          <label>CNPJ / CPF</label>
-          <input type="text" id="client-doc" placeholder="00.000.000/0001-00" autocomplete="new-password"/>
-        </div>
+        <span class="field-error" id="err-client">Campo obrigatório</span>
       </div>
       <div class="grid-2" style="margin-top:13px">
         <div class="field">
@@ -545,17 +539,44 @@
         <div class="section-num">3</div>
         <h2 class="section-title">Data, Período e Horários</h2>
       </div>
-      <div class="grid-4">
-        <div class="field">
-          <label>Data de início <span class="req">*</span></label>
-          <input type="date" id="date-start" required/>
-          <span class="field-error" id="err-date-start">Obrigatório</span>
+      <!-- CALENDÁRIO MULTI-DATA -->
+      <div class="field" style="margin-bottom:14px">
+        <label>Dias do serviço <span class="req">*</span> <span style="font-size:.6rem;color:var(--muted);font-weight:400;letter-spacing:0;text-transform:none">— toque nas datas para selecionar</span></label>
+        <div id="multi-cal" style="background:var(--surface2);border:1px solid rgba(0,200,248,.15);border-radius:12px;overflow:hidden;user-select:none">
+          <!-- Header navegação -->
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px 10px;border-bottom:1px solid rgba(0,200,248,.1)">
+            <button type="button" id="cal-prev" onclick="calNav(-1)" style="background:rgba(0,200,248,.08);border:1px solid rgba(0,200,248,.18);border-radius:6px;color:var(--cyan);font-size:.9rem;width:32px;height:32px;cursor:pointer;transition:background .2s" onmouseover="this.style.background='rgba(0,200,248,.2)'" onmouseout="this.style.background='rgba(0,200,248,.08)'">‹</button>
+            <div id="cal-month-label" style="font-family:'Orbitron',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:2px;color:var(--white)"></div>
+            <button type="button" id="cal-next" onclick="calNav(1)" style="background:rgba(0,200,248,.08);border:1px solid rgba(0,200,248,.18);border-radius:6px;color:var(--cyan);font-size:.9rem;width:32px;height:32px;cursor:pointer;transition:background .2s" onmouseover="this.style.background='rgba(0,200,248,.2)'" onmouseout="this.style.background='rgba(0,200,248,.08)'">›</button>
+          </div>
+          <!-- Dias da semana -->
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;padding:10px 12px 4px;text-align:center">
+            <div style="font-family:'Rajdhani',sans-serif;font-size:.58rem;font-weight:600;letter-spacing:1.5px;color:var(--danger);opacity:.7">DOM</div>
+            <div style="font-family:'Rajdhani',sans-serif;font-size:.58rem;font-weight:600;letter-spacing:1.5px;color:var(--muted);opacity:.7">SEG</div>
+            <div style="font-family:'Rajdhani',sans-serif;font-size:.58rem;font-weight:600;letter-spacing:1.5px;color:var(--muted);opacity:.7">TER</div>
+            <div style="font-family:'Rajdhani',sans-serif;font-size:.58rem;font-weight:600;letter-spacing:1.5px;color:var(--muted);opacity:.7">QUA</div>
+            <div style="font-family:'Rajdhani',sans-serif;font-size:.58rem;font-weight:600;letter-spacing:1.5px;color:var(--muted);opacity:.7">QUI</div>
+            <div style="font-family:'Rajdhani',sans-serif;font-size:.58rem;font-weight:600;letter-spacing:1.5px;color:var(--muted);opacity:.7">SEX</div>
+            <div style="font-family:'Rajdhani',sans-serif;font-size:.58rem;font-weight:600;letter-spacing:1.5px;color:var(--danger);opacity:.7">SÁB</div>
+          </div>
+          <!-- Grade de dias -->
+          <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;padding:2px 12px 12px"></div>
         </div>
-        <div class="field">
-          <label>Data de término <span class="req">*</span></label>
-          <input type="date" id="date-end" required/>
-          <span class="field-error" id="err-date-end">Obrigatório</span>
+        <!-- Datas selecionadas -->
+        <div id="cal-selected-wrap" style="margin-top:10px;display:none">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px">
+            <span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--cyan)">📅 <span id="cal-count">0</span> dia(s) selecionado(s)</span>
+            <button type="button" onclick="calClearAll()" style="background:none;border:1px solid rgba(224,92,92,.25);border-radius:5px;color:var(--danger);font-family:'Rajdhani',sans-serif;font-size:.58rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;padding:3px 10px;cursor:pointer;transition:all .2s">Limpar</button>
+          </div>
+          <div id="cal-chips" style="display:flex;flex-wrap:wrap;gap:5px"></div>
         </div>
+        <span class="field-error" id="err-date-start">Selecione ao menos uma data</span>
+        <!-- hidden inputs mantidos para compatibilidade com validação/submit -->
+        <input type="hidden" id="date-start"/>
+        <input type="hidden" id="date-end"/>
+      </div>
+      <!-- HORÁRIOS -->
+      <div class="grid-2">
         <div class="field">
           <label>Horário início <span class="req">*</span></label>
           <input type="time" id="time-start" required/>
@@ -790,16 +811,10 @@
       <button type="button" class="modal-close" onclick="closeClientModal()">✕</button>
     </div>
     <div class="modal-body">
-      <div class="grid-2">
-        <div class="field">
-          <label>Nome / Razão social <span class="req">*</span></label>
-          <input type="text" id="mc-name" placeholder="Empresa ou pessoa física" autocomplete="new-password"/>
-          <span class="field-error" id="mc-err-name">Campo obrigatório</span>
-        </div>
-        <div class="field">
-          <label>CNPJ / CPF</label>
-          <input type="text" id="mc-doc" placeholder="00.000.000/0001-00" autocomplete="new-password"/>
-        </div>
+      <div class="field">
+        <label>Nome / Razão social <span class="req">*</span></label>
+        <input type="text" id="mc-name" placeholder="Empresa ou pessoa física" autocomplete="new-password"/>
+        <span class="field-error" id="mc-err-name">Campo obrigatório</span>
       </div>
       <div class="grid-2">
         <div class="field">
@@ -831,16 +846,10 @@
       <button type="button" class="modal-close" onclick="closeSupervisorModal()">✕</button>
     </div>
     <div class="modal-body">
-      <div class="grid-2">
-        <div class="field">
-          <label>Nome completo <span class="req">*</span></label>
-          <input type="text" id="ms-name" placeholder="Nome do supervisor" autocomplete="new-password"/>
-          <span class="field-error" id="ms-err-name">Campo obrigatório</span>
-        </div>
-        <div class="field">
-          <label>CPF</label>
-          <input type="text" id="ms-cpf" placeholder="000.000.000-00" autocomplete="new-password"/>
-        </div>
+      <div class="field">
+        <label>Nome completo <span class="req">*</span></label>
+        <input type="text" id="ms-name" placeholder="Nome do supervisor" autocomplete="new-password"/>
+        <span class="field-error" id="ms-err-name">Campo obrigatório</span>
       </div>
       <div class="grid-2">
         <div class="field">
@@ -1003,8 +1012,102 @@
 
 <script>
 // ══════════════════════════════════════════
-// FIREBASE CONFIG + INIT
+// CALENDÁRIO MULTI-DATA
 // ══════════════════════════════════════════
+let calSelectedDates = []; // array de strings 'YYYY-MM-DD'
+let calYear, calMonth;
+
+function calInit(){
+  const now = new Date();
+  calYear  = now.getFullYear();
+  calMonth = now.getMonth();
+  calRender();
+}
+
+function calNav(dir){
+  calMonth += dir;
+  if(calMonth > 11){ calMonth = 0; calYear++; }
+  if(calMonth < 0) { calMonth = 11; calYear--; }
+  calRender();
+}
+
+function calRender(){
+  const months = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  document.getElementById('cal-month-label').textContent = months[calMonth] + ' ' + calYear;
+
+  const grid = document.getElementById('cal-grid');
+  const firstDay = new Date(calYear, calMonth, 1).getDay(); // 0=Dom
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const today = new Date().toISOString().slice(0,10);
+
+  let html = '';
+  // Células vazias antes do dia 1
+  for(let i = 0; i < firstDay; i++){
+    html += `<div style="aspect-ratio:1"></div>`;
+  }
+  for(let d = 1; d <= daysInMonth; d++){
+    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isSelected = calSelectedDates.includes(dateStr);
+    const isToday    = dateStr === today;
+    const dow        = new Date(calYear, calMonth, d).getDay();
+    const isWeekend  = dow === 0 || dow === 6;
+
+    const bg      = isSelected ? 'var(--cyan)'          : 'rgba(0,200,248,.05)';
+    const color   = isSelected ? 'var(--navy)'          : isToday ? 'var(--cyan2)' : isWeekend ? 'rgba(255,100,100,.8)' : 'var(--text)';
+    const border  = isSelected ? 'var(--cyan)'          : isToday ? 'rgba(0,200,248,.5)' : 'rgba(0,200,248,.08)';
+    const fw      = isSelected || isToday ? '700' : '400';
+    const shadow  = isSelected ? '0 0 10px rgba(0,200,248,.5)' : 'none';
+
+    html += `<div onclick="calToggleDate('${dateStr}')" style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:8px;border:1.5px solid ${border};background:${bg};color:${color};font-size:13px;font-weight:${fw};cursor:pointer;transition:all .15s;box-shadow:${shadow}" onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">${d}</div>`;
+  }
+  grid.innerHTML = html;
+  calUpdateChips();
+}
+
+function calToggleDate(dateStr){
+  const idx = calSelectedDates.indexOf(dateStr);
+  if(idx >= 0) calSelectedDates.splice(idx, 1);
+  else         calSelectedDates.push(dateStr);
+  calSelectedDates.sort();
+  calRender();
+  // atualiza hidden inputs para compatibilidade
+  if(calSelectedDates.length > 0){
+    document.getElementById('date-start').value = calSelectedDates[0];
+    document.getElementById('date-end').value   = calSelectedDates[calSelectedDates.length-1];
+    document.getElementById('err-date-start').style.display = 'none';
+  } else {
+    document.getElementById('date-start').value = '';
+    document.getElementById('date-end').value   = '';
+  }
+  updateSummary();
+}
+
+function calUpdateChips(){
+  const wrap  = document.getElementById('cal-selected-wrap');
+  const chips = document.getElementById('cal-chips');
+  const count = document.getElementById('cal-count');
+  if(!calSelectedDates.length){ wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  count.textContent  = calSelectedDates.length;
+  chips.innerHTML    = calSelectedDates.map(d => {
+    const [y,m,day] = d.split('-');
+    const label     = `${day}/${m}/${y}`;
+    return `<span style="display:inline-flex;align-items:center;gap:5px;background:rgba(0,200,248,.12);border:1px solid rgba(0,200,248,.3);border-radius:20px;padding:4px 10px 4px 12px;font-family:'Rajdhani',sans-serif;font-size:.72rem;font-weight:600;color:var(--cyan2)">
+      ${label}
+      <span onclick="calToggleDate('${d}')" style="cursor:pointer;color:var(--muted);font-size:.9rem;line-height:1;transition:color .15s" onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--muted)'">×</span>
+    </span>`;
+  }).join('');
+}
+
+function calClearAll(){
+  calSelectedDates = [];
+  document.getElementById('date-start').value = '';
+  document.getElementById('date-end').value   = '';
+  calRender();
+  updateSummary();
+}
+
+// Calendário é inicializado no DOMContentLoaded principal abaixo
 const firebaseConfig = {
   apiKey: "AIzaSyDojh97p_R6lkggmO95KcNpCSWhx2po1uw",
   authDomain: "novo-servico.firebaseapp.com",
@@ -1220,7 +1323,6 @@ function acInput(inp){
 function acSelect(clientId){
   const c = clients.find(x => x.id === clientId); if(!c) return;
   document.getElementById('client-name').value    = c.name;
-  document.getElementById('client-doc').value     = c.doc||'';
   document.getElementById('client-contact').value = c.contact||'';
   document.getElementById('client-phone').value   = c.phone||'';
   closeAc(); updateSummary();
@@ -1297,7 +1399,7 @@ function supAcKeydown(e){
   items.forEach((el,i) => el.classList.toggle('active', i===supAcIndex));
 }
 function _clearClientModal(){
-  ['mc-name','mc-doc','mc-contact','mc-phone'].forEach(id => {
+  ['mc-name','mc-contact','mc-phone'].forEach(id => {
     const el = document.getElementById(id);
     if(!el) return;
     el.value = '';
@@ -1342,7 +1444,6 @@ function saveClient(){
     const c = clients.find(x => x.id === editingClientId);
     if(c){
       c.name    = name;
-      c.doc     = (document.getElementById('mc-doc')?.value||'').trim();
       c.contact = (document.getElementById('mc-contact')?.value||'').trim();
       c.phone   = (document.getElementById('mc-phone')?.value||'').trim();
       c.obs     = (document.getElementById('mc-obs')?.value||'').trim();
@@ -1355,7 +1456,6 @@ function saveClient(){
   const c = {
     id:      Date.now(),
     name,
-    doc:     (document.getElementById('mc-doc')?.value||'').trim(),
     contact: (document.getElementById('mc-contact')?.value||'').trim(),
     phone:   (document.getElementById('mc-phone')?.value||'').trim(),
     obs:     (document.getElementById('mc-obs')?.value||'').trim(),
@@ -1363,7 +1463,6 @@ function saveClient(){
   clients.unshift(c);
   save(); saveToFb('clientes', c);
   document.getElementById('client-name').value    = c.name;
-  document.getElementById('client-doc').value     = c.doc;
   document.getElementById('client-contact').value = c.contact;
   document.getElementById('client-phone').value   = c.phone;
   updateSummary();
@@ -1447,22 +1546,23 @@ function getEscala(){
 // ══════════════════════════════════════════
 function updateSummary(){
   const client = document.getElementById('client-name').value.trim();
-  const ds     = document.getElementById('date-start').value;
-  const de     = document.getElementById('date-end').value;
   const val    = document.getElementById('payment-value').value;
   const pag    = document.getElementById('pay-collab').value;
   const vagas  = document.getElementById('vagas').value;
   const el     = document.getElementById('submit-summary');
-  if(client && ds){
+  if(client && calSelectedDates.length){
     const fmt = d => d ? new Date(d+'T00:00:00').toLocaleDateString('pt-BR') : '—';
-    el.innerHTML = `<strong>${client}</strong> &nbsp;·&nbsp; ${fmt(ds)} → ${fmt(de)}<br/>
+    const datesLabel = calSelectedDates.length === 1
+      ? fmt(calSelectedDates[0])
+      : `${fmt(calSelectedDates[0])} … ${fmt(calSelectedDates[calSelectedDates.length-1])} (${calSelectedDates.length} dias)`;
+    el.innerHTML = `<strong>${client}</strong> &nbsp;·&nbsp; ${datesLabel}<br/>
       Cliente: ${val?'R$ '+parseFloat(val).toLocaleString('pt-BR',{minimumFractionDigits:2}):'—'} &nbsp;·&nbsp;
       Colaborador: ${pag?'R$ '+parseFloat(pag).toLocaleString('pt-BR',{minimumFractionDigits:2}):'—'} &nbsp;·&nbsp; ${vagas} vaga(s)`;
   } else {
     el.innerHTML = 'Preencha os campos obrigatórios para lançar o serviço.';
   }
 }
-['client-name','date-start','date-end','payment-value','pay-collab','vagas'].forEach(id => {
+['client-name','payment-value','pay-collab','vagas'].forEach(id => {
   document.getElementById(id)?.addEventListener('input', updateSummary);
 });
 
@@ -1483,9 +1583,9 @@ function _forceSelect(id){
 }
 
 function resetForm(){
-  ['client-name','client-doc','client-contact','client-phone',
+  ['client-name','client-contact','client-phone',
    'service-location','service-desc',
-   'date-start','date-end','time-start','time-end',
+   'time-start','time-end',
    'pay-collab','pay-obs','payment-value','payment-obs'
   ].forEach(_forceEmpty);
   ['pay-collab-type','payment-type','payment-method-sel','service-name'].forEach(_forceSelect);
@@ -1503,13 +1603,16 @@ function resetForm(){
   document.getElementById('toggle-icon').classList.remove('active');
   document.getElementById('special-schedules').style.display = 'none';
   document.getElementById('day-list').innerHTML = '';
+  // Reseta calendário
+  calSelectedDates = [];
+  calInit();
   closeAc();
 
   // segunda passagem após render do browser
   requestAnimationFrame(()=>{
-    ['client-name','client-doc','client-contact','client-phone',
+    ['client-name','client-contact','client-phone',
      'service-location','service-desc',
-     'date-start','date-end','time-start','time-end',
+     'time-start','time-end',
      'pay-collab','pay-obs','payment-value','payment-obs'
     ].forEach(_forceEmpty);
   });
@@ -1524,8 +1627,6 @@ function validate(){
     {id:'client-name',    err:'err-client'},
     {id:'service-name',   err:'err-service'},
     {id:'service-location',err:'err-location'},
-    {id:'date-start',     err:'err-date-start'},
-    {id:'date-end',       err:'err-date-end'},
     {id:'time-start',     err:'err-time-start'},
     {id:'time-end',       err:'err-time-end'},
     {id:'pay-collab',     err:'err-pay-collab'},
@@ -1536,13 +1637,14 @@ function validate(){
     if(!el?.value.trim()){ el?.classList.add('invalid'); if(errEl) errEl.style.display='block'; ok=false; }
     else { el.classList.remove('invalid'); if(errEl) errEl.style.display='none'; }
   });
-  const ds = document.getElementById('date-start').value;
-  const de = document.getElementById('date-end').value;
-  if(ds && de && de < ds){
-    document.getElementById('date-end').classList.add('invalid');
-    const e = document.getElementById('err-date-end');
-    if(e){ e.textContent='Deve ser após o início'; e.style.display='block'; }
+  // Valida datas do calendário
+  if(!calSelectedDates.length){
+    const errEl = document.getElementById('err-date-start');
+    if(errEl){ errEl.style.display='block'; errEl.textContent='Selecione ao menos uma data'; }
     ok = false;
+  } else {
+    const errEl = document.getElementById('err-date-start');
+    if(errEl) errEl.style.display='none';
   }
   return ok;
 }
@@ -1555,14 +1657,14 @@ document.getElementById('service-form').addEventListener('submit', function(e){
   const svc = {
     id:           Date.now(),
     client:       document.getElementById('client-name').value.trim(),
-    clientDoc:    document.getElementById('client-doc').value.trim(),
     contact:      document.getElementById('client-contact').value.trim(),
     phone:        document.getElementById('client-phone').value.trim(),
     service:      document.getElementById('service-name').value.trim(),
     location:     document.getElementById('service-location').value.trim(),
     desc:         document.getElementById('service-desc').value.trim(),
-    dateStart:    document.getElementById('date-start').value,
-    dateEnd:      document.getElementById('date-end').value,
+    dateStart:    calSelectedDates[0] || '',
+    dateEnd:      calSelectedDates[calSelectedDates.length-1] || '',
+    selectedDates: [...calSelectedDates],
     timeStart:    document.getElementById('time-start').value,
     timeEnd:      document.getElementById('time-end').value,
     escala:       getEscala(),
@@ -1581,7 +1683,7 @@ document.getElementById('service-form').addEventListener('submit', function(e){
   services.unshift(svc);
   // auto-cadastra o cliente se for novo
   if(!clients.some(c => c.name.toLowerCase() === svc.client.toLowerCase())){
-    const nc = {id:Date.now()+1, name:svc.client, doc:svc.clientDoc, contact:svc.contact, phone:svc.phone, obs:''};
+    const nc = {id:Date.now()+1, name:svc.client, contact:svc.contact, phone:svc.phone, obs:''};
     clients.unshift(nc);
     saveToFb('clientes', nc);
   }
@@ -1795,7 +1897,6 @@ function editClient(id){
   _clearClientModal();
   document.getElementById('modal-title').textContent = 'Editar Cliente';
   document.getElementById('mc-name').value    = c.name;
-  document.getElementById('mc-doc').value     = c.doc||'';
   document.getElementById('mc-contact').value = c.contact||'';
   document.getElementById('mc-phone').value   = c.phone||'';
   document.getElementById('mc-obs').value     = c.obs||'';
@@ -1884,7 +1985,7 @@ function closeSupervisorModal(){
   editingSupId = null; _clearSupModal();
 }
 function _clearSupModal(){
-  ['ms-name','ms-cpf','ms-phone','ms-email','ms-mat'].forEach(id=>{
+  ['ms-name','ms-phone','ms-email','ms-mat'].forEach(id=>{
     const el=document.getElementById(id); if(el){el.value='';el.defaultValue='';el.removeAttribute('value');}
   });
   const obs=document.getElementById('ms-obs'); if(obs){obs.value='';obs.textContent='';}
@@ -1898,7 +1999,6 @@ function editSupervisor(id){
   _clearSupModal();
   document.getElementById('modal-sup-title').textContent='Editar Supervisor';
   document.getElementById('ms-name').value  = s.name;
-  document.getElementById('ms-cpf').value   = s.cpf||'';
   document.getElementById('ms-phone').value = s.phone||'';
   document.getElementById('ms-email').value = s.email||'';
   document.getElementById('ms-mat').value   = s.mat||'';
@@ -1923,7 +2023,6 @@ function saveSupervisor(){
     const s=supervisors.find(x=>x.id===editingSupId);
     if(s){
       s.name  = name;
-      s.cpf   = (document.getElementById('ms-cpf')?.value||'').trim();
       s.phone = (document.getElementById('ms-phone')?.value||'').trim();
       s.email = (document.getElementById('ms-email')?.value||'').trim();
       s.role  = document.getElementById('ms-role')?.value||'';
@@ -1936,7 +2035,6 @@ function saveSupervisor(){
     }
   }
   const s={id:Date.now(),name,
-    cpf:(document.getElementById('ms-cpf')?.value||'').trim(),
     phone:(document.getElementById('ms-phone')?.value||'').trim(),
     email:(document.getElementById('ms-email')?.value||'').trim(),
     role:document.getElementById('ms-role')?.value||'',
@@ -2067,6 +2165,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   document.getElementById('panel-form').style.display = 'block';
   document.getElementById('panel-db').style.display   = 'none';
   populateServiceTypeSelect();
+  calInit();
 
   // Carrega Firebase SDKs dinamicamente e depois inicializa
   function loadScript(src, cb){
