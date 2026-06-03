@@ -245,6 +245,33 @@
 
     .db-overflow{overflow-x:auto;-webkit-overflow-scrolling:touch}
 
+    /* ── SERVICE CARDS ── */
+    .svc-cards{display:flex;flex-direction:column;gap:10px}
+    .svc-card{background:var(--surface2);border:1px solid rgba(0,200,248,.12);border-radius:12px;overflow:hidden;transition:border-color .2s,box-shadow .2s;animation:fadeSlide .2s ease}
+    .svc-card:hover{border-color:rgba(0,200,248,.28);box-shadow:0 4px 20px rgba(0,0,0,.4)}
+    .svc-card-top{display:flex;align-items:center;gap:10px;padding:12px 14px 9px;border-bottom:1px solid rgba(0,200,248,.07)}
+    .svc-card-client{font-family:'Rajdhani',sans-serif;font-size:.88rem;font-weight:700;color:var(--white);letter-spacing:.5px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .svc-card-type{font-family:'Rajdhani',sans-serif;font-size:.6rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--cyan);background:rgba(0,200,248,.09);border:1px solid rgba(0,200,248,.18);border-radius:4px;padding:2px 8px;white-space:nowrap;flex-shrink:0}
+    .svc-card-body{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;padding:10px 14px 8px}
+    .svc-card-field{display:flex;flex-direction:column;gap:1px}
+    .svc-card-label{font-family:'Rajdhani',sans-serif;font-size:.55rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+    .svc-card-val{font-size:12.5px;color:var(--text)}
+    .svc-card-val.accent{color:var(--accent);font-weight:600}
+    .svc-card-val.cyan{color:var(--cyan2)}
+    .svc-card-bottom{display:flex;align-items:center;justify-content:space-between;padding:8px 14px 10px;gap:8px;border-top:1px solid rgba(0,200,248,.07)}
+    .svc-card-actions{display:flex;gap:6px}
+    .svc-card-actions button{background:none;border:1px solid rgba(0,200,248,.15);border-radius:6px;color:var(--muted);font-size:.8rem;cursor:pointer;padding:5px 11px;transition:all .18s}
+    .svc-card-actions button:hover{background:rgba(0,200,248,.08);border-color:var(--cyan);color:var(--cyan)}
+    .svc-card-actions button.del:hover{background:rgba(224,92,92,.08);border-color:var(--danger);color:var(--danger)}
+    .svc-card-vagas{display:flex;align-items:center;gap:6px}
+    .svc-card-vagas-bar{width:60px;height:5px;background:rgba(0,200,248,.1);border-radius:3px;overflow:hidden;flex-shrink:0}
+    .svc-card-vagas-fill{height:100%;border-radius:3px;transition:width .3s}
+    .svc-card-vagas-fill.full{background:var(--success)}
+    .svc-card-vagas-fill.partial{background:var(--warn)}
+    .svc-card-vagas-fill.empty{background:var(--danger)}
+    .svc-card-vagas-txt{font-family:'Orbitron',sans-serif;font-size:.58rem;font-weight:700;color:var(--muted)}
+    .svc-card-loc{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+
     /* modal genérico reutilizável */
     #modal-supervisor .modal-box,#modal-service-view .modal-box{max-width:540px}
 
@@ -660,21 +687,7 @@
             <input class="db-search" id="db-search-services" placeholder="Buscar serviço…" oninput="renderServices()"/>
             <span class="db-count" id="db-count-services"></span>
           </div>
-          <div class="db-overflow">
-            <table class="db-table">
-              <thead><tr>
-                <th>Cliente</th>
-                <th>Serviço</th>
-                <th>Local</th>
-                <th>Início</th>
-                <th>Vagas</th>
-                <th>Valor cliente</th>
-                <th>Status</th>
-                <th></th>
-              </tr></thead>
-              <tbody id="db-body-services"></tbody>
-            </table>
-          </div>
+          <div class="svc-cards" id="svc-cards-list"></div>
         </div>
 
       </div>
@@ -1795,9 +1808,9 @@ function renderServices(){
     (s.location||'').toLowerCase().includes(q)
   );
   document.getElementById('db-count-services').textContent=list.length+' registro(s)';
-  const tbody=document.getElementById('db-body-services');
+  const container=document.getElementById('svc-cards-list');
   if(!list.length){
-    tbody.innerHTML=`<tr><td colspan="8" class="db-empty">Nenhum serviço lançado</td></tr>`;
+    container.innerHTML=`<div class="db-empty">Nenhum serviço lançado</div>`;
     return;
   }
   const fmt=d=>d?new Date(d+'T00:00:00').toLocaleDateString('pt-BR'):'—';
@@ -1806,20 +1819,52 @@ function renderServices(){
     if(s.status==='partial') return '<span class="badge-status badge-partial">Parcial</span>';
     return '<span class="badge-status badge-pending">Pendente</span>';
   };
-  tbody.innerHTML=list.map(s=>`
-    <tr>
-      <td><strong style="color:var(--white)">${s.client}</strong></td>
-      <td>${s.service||'—'}</td>
-      <td>${s.location||'—'}</td>
-      <td style="white-space:nowrap">${fmt(s.dateStart)}</td>
-      <td style="text-align:center">${s.coberturas||0}/${s.vagas||1}</td>
-      <td style="color:var(--accent)">R$ ${(s.payClient||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
-      <td>${statusBadge(s)}</td>
-      <td class="td-actions">
-        <button onclick="viewService(${s.id})" title="Ver detalhes">👁</button>
-        <button class="del" onclick="deleteService(${s.id})" title="Excluir">🗑</button>
-      </td>
-    </tr>`).join('');
+  container.innerHTML=list.map(s=>{
+    const cob=s.coberturas||0, vag=s.vagas||1;
+    const pct=Math.round((cob/vag)*100);
+    const fillCls=cob>=vag?'full':cob>0?'partial':'empty';
+    const payVal=s.payClient?'R$ '+(s.payClient).toLocaleString('pt-BR',{minimumFractionDigits:2}):'—';
+    const periodo=s.dateStart?(fmt(s.dateStart)+(s.dateEnd&&s.dateEnd!==s.dateStart?' → '+fmt(s.dateEnd):'')):'—';
+    return `
+    <div class="svc-card">
+      <div class="svc-card-top">
+        <div class="svc-card-client" title="${s.client}">${s.client}</div>
+        ${s.service?`<div class="svc-card-type">${s.service}</div>`:''}
+        ${statusBadge(s)}
+      </div>
+      <div class="svc-card-body">
+        <div class="svc-card-field" style="grid-column:1/-1">
+          <div class="svc-card-label">📍 Local</div>
+          <div class="svc-card-val svc-card-loc" title="${s.location||''}">${s.location||'—'}</div>
+        </div>
+        <div class="svc-card-field">
+          <div class="svc-card-label">📅 Período</div>
+          <div class="svc-card-val">${periodo}</div>
+        </div>
+        <div class="svc-card-field">
+          <div class="svc-card-label">⏰ Horário</div>
+          <div class="svc-card-val">${s.timeStart||'—'}${s.timeEnd?' – '+s.timeEnd:''}</div>
+        </div>
+        <div class="svc-card-field">
+          <div class="svc-card-label">💰 Valor cliente</div>
+          <div class="svc-card-val accent">${payVal}</div>
+        </div>
+        <div class="svc-card-field">
+          <div class="svc-card-label">👤 Colaborador</div>
+          <div class="svc-card-val">R$ ${(s.payCollab||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</div>
+        </div>
+      </div>
+      <div class="svc-card-bottom">
+        <div class="svc-card-vagas">
+          <div class="svc-card-vagas-bar"><div class="svc-card-vagas-fill ${fillCls}" style="width:${pct}%"></div></div>
+          <div class="svc-card-vagas-txt">${cob}/${vag} vaga${vag!==1?'s':''}</div>
+        </div>
+        <div class="svc-card-actions">
+          <button onclick="viewService(${s.id})" title="Ver detalhes">👁 Ver</button>
+          <button class="del" onclick="deleteService(${s.id})" title="Excluir">🗑</button>
+        </div>
+      </div>
+    </div>`}).join('');
 }
 
 function viewService(id){
