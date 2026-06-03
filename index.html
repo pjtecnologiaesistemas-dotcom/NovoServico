@@ -504,10 +504,33 @@
       </div>
     </div>
 
-    <!-- 5. FINANCEIRO CLIENTE -->
+    <!-- 5. SUPERVISOR RESPONSÁVEL -->
     <div class="section">
       <div class="section-header">
         <div class="section-num">5</div>
+        <h2 class="section-title">Supervisor Responsável</h2>
+      </div>
+      <div class="grid-2">
+        <div class="field">
+          <label>Supervisor que realizou a cobertura <span class="req">*</span></label>
+          <div class="ac-wrap">
+            <input type="text" id="supervisor-name" placeholder="Digite para buscar ou informar nome…" required autocomplete="new-password"
+              oninput="supAcInput(this)" onkeydown="supAcKeydown(event)" onblur="supAcBlur()"/>
+            <div class="ac-dropdown" id="sup-ac-dropdown"></div>
+          </div>
+          <span class="field-error" id="err-supervisor">Informe o supervisor responsável</span>
+        </div>
+        <div class="field">
+          <label>Observação do supervisor</label>
+          <input type="text" id="supervisor-obs" placeholder="Ex.: Chegou no horário, ocorrência registrada…" autocomplete="new-password"/>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. FINANCEIRO CLIENTE -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">6</div>
         <h2 class="section-title">Financeiro — Cliente</h2>
       </div>
       <div class="grid-3">
@@ -1059,8 +1082,58 @@ function acKeydown(e){
 }
 
 // ══════════════════════════════════════════
-// MODAL CLIENTE
+// AUTOCOMPLETE SUPERVISOR
 // ══════════════════════════════════════════
+let supAcIndex = -1;
+function supAcInput(inp){
+  const q  = inp.value.trim().toLowerCase();
+  const dd = document.getElementById('sup-ac-dropdown');
+  if(!q){ dd.classList.remove('open'); dd.innerHTML=''; return; }
+  const matches = supervisors.filter(s => s.name.toLowerCase().includes(q));
+  supAcIndex = -1;
+  let html = matches.map((s,i) => `
+    <div class="ac-item" data-idx="${i}" onmousedown="supAcSelect(${s.id})">
+      <div class="ac-item-name">${s.name}</div>
+      ${s.role ? `<div class="ac-item-doc">${s.role}${s.mat?' · '+s.mat:''}</div>` : ''}
+    </div>`).join('');
+  if(!matches.length){
+    html += `<div class="ac-item-new" onmousedown="supAcFree('${inp.value.trim().replace(/'/g,"\\'")}')">
+      <span>LIVRE</span> Usar "${inp.value.trim()}"</div>`;
+  }
+  dd.innerHTML = html;
+  dd.classList.add('open');
+  // limpa erro ao digitar
+  const errEl = document.getElementById('err-supervisor');
+  if(errEl) errEl.style.display='none';
+  inp.classList.remove('invalid');
+}
+function supAcSelect(supId){
+  const s = supervisors.find(x => x.id === supId); if(!s) return;
+  document.getElementById('supervisor-name').value = s.name;
+  supAcClose();
+  const errEl = document.getElementById('err-supervisor');
+  if(errEl) errEl.style.display='none';
+  document.getElementById('supervisor-name').classList.remove('invalid');
+}
+function supAcFree(name){
+  document.getElementById('supervisor-name').value = name;
+  supAcClose();
+}
+function supAcBlur(){ setTimeout(supAcClose, 180); }
+function supAcClose(){
+  document.getElementById('sup-ac-dropdown').classList.remove('open');
+  supAcIndex = -1;
+}
+function supAcKeydown(e){
+  const dd    = document.getElementById('sup-ac-dropdown');
+  const items = dd.querySelectorAll('.ac-item');
+  if(!dd.classList.contains('open')) return;
+  if(e.key==='ArrowDown'){ e.preventDefault(); supAcIndex=Math.min(supAcIndex+1,items.length-1); }
+  else if(e.key==='ArrowUp'){ e.preventDefault(); supAcIndex=Math.max(supAcIndex-1,0); }
+  else if(e.key==='Enter'&&supAcIndex>=0){ e.preventDefault(); items[supAcIndex]?.dispatchEvent(new MouseEvent('mousedown')); return; }
+  else if(e.key==='Escape'){ supAcClose(); return; }
+  items.forEach((el,i) => el.classList.toggle('active', i===supAcIndex));
+}
 function _clearClientModal(){
   ['mc-name','mc-doc','mc-contact','mc-phone'].forEach(id => {
     const el = document.getElementById(id);
@@ -1241,7 +1314,8 @@ function resetForm(){
   ['client-name','client-doc','client-contact','client-phone',
    'service-name','service-location','service-desc',
    'date-start','date-end','time-start','time-end',
-   'pay-collab','pay-obs','payment-value','payment-obs'
+   'pay-collab','pay-obs','payment-value','payment-obs',
+   'supervisor-name','supervisor-obs'
   ].forEach(_forceEmpty);
   ['pay-collab-type','payment-type','payment-method-sel'].forEach(_forceSelect);
 
@@ -1264,7 +1338,8 @@ function resetForm(){
     ['client-name','client-doc','client-contact','client-phone',
      'service-name','service-location','service-desc',
      'date-start','date-end','time-start','time-end',
-     'pay-collab','pay-obs','payment-value','payment-obs'
+     'pay-collab','pay-obs','payment-value','payment-obs',
+     'supervisor-name','supervisor-obs'
     ].forEach(_forceEmpty);
   });
 }
@@ -1284,6 +1359,7 @@ function validate(){
     {id:'time-end',       err:'err-time-end'},
     {id:'pay-collab',     err:'err-pay-collab'},
     {id:'payment-value',  err:'err-payment'},
+    {id:'supervisor-name',err:'err-supervisor'},
   ];
   req.forEach(({id,err})=>{
     const el = document.getElementById(id);
@@ -1329,6 +1405,8 @@ document.getElementById('service-form').addEventListener('submit', function(e){
     payMethod:    document.getElementById('payment-method-sel').value,
     payCond:      cond ? cond.textContent : '',
     payClientObs: document.getElementById('payment-obs').value.trim(),
+    supervisor:   document.getElementById('supervisor-name').value.trim(),
+    supervisorObs:document.getElementById('supervisor-obs').value.trim(),
     status:       'pending',
     createdAt:    new Date().toLocaleDateString('pt-BR'),
   };
@@ -1609,6 +1687,11 @@ function viewService(id){
       <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Valor cliente</span><div style="color:var(--accent);margin-top:3px">R$ ${(s.payClient||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</div></div>
       <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Valor colaborador</span><div style="margin-top:3px">R$ ${(s.payCollab||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</div></div>
       <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Forma pag.</span><div style="margin-top:3px">${s.payMethod||'—'} ${s.payCond?'· '+s.payCond:''}</div></div>
+      <div style="grid-column:1/-1;border-top:1px solid rgba(0,200,248,.1);padding-top:10px;margin-top:2px">
+        <span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--cyan)">🎖 Supervisor Responsável</span>
+        <div style="color:var(--white);font-weight:600;margin-top:4px;font-size:14px">${s.supervisor||'<span style="color:var(--danger)">Não informado</span>'}</div>
+        ${s.supervisorObs?`<div style="margin-top:3px;font-size:12px;color:var(--muted)">${s.supervisorObs}</div>`:''}
+      </div>
       ${s.desc?`<div style="grid-column:1/-1"><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Descrição</span><div style="margin-top:3px">${s.desc}</div></div>`:''}
     </div>`;
   document.getElementById('modal-service-view').classList.add('open');
