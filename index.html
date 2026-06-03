@@ -6,8 +6,8 @@
   <title>PJ Tecnologia — Novo Serviço</title>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@300;400;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
   <!-- Firebase SDK (compat) -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{
@@ -870,15 +870,23 @@ let db = null;
 let fbReady = false;
 let fbError = null;
 
-try {
-  if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-  db = firebase.firestore();
-  fbReady = true;
-  diagLog('info', 'Firebase inicializado com sucesso');
-} catch(e) {
-  fbError = e.message;
-  diagLog('err', 'Erro ao inicializar Firebase: ' + e.message);
+function initFirebase(){
+  try {
+    if (typeof firebase === 'undefined') throw new Error('SDK não carregado');
+    if (typeof firebase.firestore === 'undefined') throw new Error('firestore-compat não carregado');
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    // Teste imediato para confirmar que o objeto está funcional
+    if (typeof db.collection !== 'function') throw new Error('db.collection não é função');
+    fbReady = true;
+    diagLog('ok', 'Firebase + Firestore inicializados');
+  } catch(e) {
+    fbError = e.message;
+    fbReady = false;
+    diagLog('err', 'Erro init Firebase: ' + e.message);
+  }
 }
+initFirebase();
 
 // Utilitários Firebase
 async function fbSave(col, id, data){
@@ -1665,19 +1673,23 @@ function diagVal(id, text, cls){
 }
 
 async function diagRefresh(){
-  diagVal('diag-sdk', typeof firebase !== 'undefined' ? 'Carregado' : 'NÃO ENCONTRADO',
-    typeof firebase !== 'undefined' ? 'diag-val-ok' : 'diag-val-err');
+  // Tenta reinicializar se ainda não está pronto
+  if(!fbReady) initFirebase();
+
+  diagVal('diag-sdk',
+    (typeof firebase !== 'undefined' && typeof firebase.firestore !== 'undefined') ? 'Carregado v10' : 'NÃO ENCONTRADO',
+    (typeof firebase !== 'undefined' && typeof firebase.firestore !== 'undefined') ? 'diag-val-ok' : 'diag-val-err');
 
   diagVal('diag-project', firebaseConfig.projectId, 'diag-val-info');
 
   if(!fbReady){
-    diagVal('diag-firestore', fbError ? 'ERRO: '+fbError.slice(0,30) : 'Não inicializado', 'diag-val-err');
-    diagVal('diag-mode', 'Somente localStorage', 'diag-val-warn');
+    diagVal('diag-firestore', fbError ? fbError.slice(0,35) : 'Não inicializado', 'diag-val-err');
+    diagVal('diag-mode', 'Somente localStorage (fallback)', 'diag-val-warn');
     diagVal('diag-col-services','—','diag-val-muted');
     diagVal('diag-col-clients','—','diag-val-muted');
     diagVal('diag-col-supervisors','—','diag-val-muted');
     diagSetDot('err');
-    diagLog('err', 'Firestore não disponível');
+    diagLog('err', 'Firestore não disponível: ' + (fbError||'erro desconhecido'));
     return;
   }
 
