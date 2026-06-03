@@ -74,6 +74,13 @@
     .balert-tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
     .balert-tag{font-family:'Rajdhani',sans-serif;font-size:.58rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;padding:2px 8px;border-radius:4px;background:rgba(224,92,92,.12);border:1px solid rgba(224,92,92,.22);color:#ffaaaa}
     .balert-actions{display:flex;gap:6px}
+    .balert-sup-wrap{margin-bottom:8px}
+    .balert-sup-label{font-family:'Rajdhani',sans-serif;font-size:.58rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,180,180,.7);margin-bottom:5px;display:block}
+    .balert-sup-select{width:100%;background:rgba(224,92,92,.1);border:1px solid rgba(224,92,92,.35);border-radius:6px;color:#ffdddd;font-family:'DM Sans',sans-serif;font-size:12.5px;padding:8px 11px;outline:none;cursor:pointer;-webkit-appearance:none;transition:border-color .2s}
+    .balert-sup-select:focus{border-color:#ff8888}
+    .balert-sup-select option{background:#1a0404;color:#ffdddd}
+    .balert-sup-select.invalid{border-color:#ff4444;box-shadow:0 0 0 2px rgba(255,68,68,.2)}
+    .balert-sup-err{font-family:'Rajdhani',sans-serif;font-size:.6rem;color:#ff8888;margin-top:3px;display:none}
     .btn-balert-cover{flex:1;background:rgba(63,207,142,.12);border:1px solid rgba(63,207,142,.28);border-radius:6px;color:var(--success);font-family:'Orbitron',sans-serif;font-size:.52rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:7px 10px;cursor:pointer;transition:all .2s}
     .btn-balert-cover:hover{background:rgba(63,207,142,.22)}
 
@@ -999,6 +1006,10 @@ function closeBalloon(){
 
 function renderBalloon(list){
   const fmt = d => d ? new Date(d+'T00:00:00').toLocaleDateString('pt-BR') : '—';
+  // Monta opções de supervisores cadastrados
+  const supOptions = supervisors.length
+    ? supervisors.map(s => `<option value="${s.name}">${s.name}${s.role?' — '+s.role:''}</option>`).join('')
+    : '';
   document.getElementById('balloon-body').innerHTML = list.map(svc => `
     <div class="balert-item" id="balert-${svc.id}">
       <div class="balert-client">${svc.client}</div>
@@ -1008,8 +1019,16 @@ function renderBalloon(list){
         <span class="balert-tag">👥 ${svc.vagas} vaga(s)</span>
         <span class="balert-tag">💰 R$ ${svc.payCollab.toLocaleString('pt-BR',{minimumFractionDigits:2})} / colab</span>
       </div>
+      <div class="balert-sup-wrap">
+        <span class="balert-sup-label">🎖 Supervisor que fez a cobertura *</span>
+        <select class="balert-sup-select" id="sup-cover-${svc.id}" onchange="this.classList.remove('invalid');document.getElementById('sup-cover-err-${svc.id}').style.display='none'">
+          <option value="">Selecione o supervisor…</option>
+          ${supOptions}
+        </select>
+        <div class="balert-sup-err" id="sup-cover-err-${svc.id}">Selecione o supervisor para confirmar</div>
+      </div>
       <div class="balert-actions">
-        <button class="btn-balert-cover" onclick="quickCover(${svc.id})">✓ Confirmar 1ª vaga</button>
+        <button class="btn-balert-cover" onclick="quickCover(${svc.id})">✓ Confirmar cobertura</button>
       </div>
     </div>`).join('');
 }
@@ -1017,10 +1036,28 @@ function renderBalloon(list){
 function quickCover(id){
   const svc = services.find(s => s.id === id);
   if(!svc || (svc.coberturas||0) >= svc.vagas) return;
+
+  // Valida supervisor selecionado
+  const supSel = document.getElementById('sup-cover-'+id);
+  const supErr = document.getElementById('sup-cover-err-'+id);
+  const supName = supSel ? supSel.value.trim() : '';
+  if(!supName){
+    if(supSel) supSel.classList.add('invalid');
+    if(supErr) supErr.style.display = 'block';
+    return;
+  }
+
   svc.coberturas = (svc.coberturas||0) + 1;
   svc.status = svc.coberturas >= svc.vagas ? 'done' : 'partial';
-  save(); updateAlerts();
-  showToast('✓ 1ª vaga de '+svc.client+' confirmada!');
+  // Registra supervisor da cobertura
+  svc.supervisor = supName;
+  if(!svc.coverDetails) svc.coverDetails = [];
+  svc.coverDetails.push({ supervisor: supName, ts: new Date().toLocaleString('pt-BR') });
+
+  save();
+  saveToFb('servicos', svc);
+  updateAlerts();
+  showToast('✓ Cobertura de '+svc.client+' confirmada por '+supName+'!');
   const el = document.getElementById('balert-'+id);
   if(el){
     el.style.transition = 'opacity .25s,transform .25s';
