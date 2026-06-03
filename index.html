@@ -413,7 +413,9 @@
       <div class="grid-2">
         <div class="field">
           <label>Tipo de serviço <span class="req">*</span></label>
-          <input type="text" id="service-name" placeholder="Ex.: Instalação, Manutenção, Consultoria…" required autocomplete="new-password"/>
+          <select id="service-name" required>
+            <option value="">Selecione o tipo…</option>
+          </select>
           <span class="field-error" id="err-service">Campo obrigatório</span>
         </div>
         <div class="field">
@@ -511,33 +513,10 @@
       </div>
     </div>
 
-    <!-- 5. SUPERVISOR RESPONSÁVEL -->
+    <!-- 5. FINANCEIRO CLIENTE -->
     <div class="section">
       <div class="section-header">
         <div class="section-num">5</div>
-        <h2 class="section-title">Supervisor Responsável</h2>
-      </div>
-      <div class="grid-2">
-        <div class="field">
-          <label>Supervisor que realizou a cobertura <span class="req">*</span></label>
-          <div class="ac-wrap">
-            <input type="text" id="supervisor-name" placeholder="Digite para buscar ou informar nome…" required autocomplete="new-password"
-              oninput="supAcInput(this)" onkeydown="supAcKeydown(event)" onblur="supAcBlur()"/>
-            <div class="ac-dropdown" id="sup-ac-dropdown"></div>
-          </div>
-          <span class="field-error" id="err-supervisor">Informe o supervisor responsável</span>
-        </div>
-        <div class="field">
-          <label>Observação do supervisor</label>
-          <input type="text" id="supervisor-obs" placeholder="Ex.: Chegou no horário, ocorrência registrada…" autocomplete="new-password"/>
-        </div>
-      </div>
-    </div>
-
-    <!-- 6. FINANCEIRO CLIENTE -->
-    <div class="section">
-      <div class="section-header">
-        <div class="section-num">6</div>
         <h2 class="section-title">Financeiro — Cliente</h2>
       </div>
       <div class="grid-3">
@@ -603,7 +582,29 @@
         <div class="db-tabs">
           <div class="db-tab active" id="dbtab-clients" onclick="switchDbTab('clients')">👥 Clientes</div>
           <div class="db-tab" id="dbtab-supervisors" onclick="switchDbTab('supervisors')">🎖 Supervisores</div>
+          <div class="db-tab" id="dbtab-servicetypes" onclick="switchDbTab('servicetypes')">🏷 Tipos de Serviço</div>
           <div class="db-tab" id="dbtab-services" onclick="switchDbTab('services')">📋 Serviços Lançados</div>
+        </div>
+
+        <!-- TIPOS DE SERVIÇO -->
+        <div class="db-panel" id="dbpanel-servicetypes">
+          <div class="db-toolbar">
+            <input class="db-search" id="db-search-servicetypes" placeholder="Buscar tipo…" oninput="renderServiceTypes()"/>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span class="db-count" id="db-count-servicetypes"></span>
+              <button type="button" class="btn-primary" style="font-size:.58rem;padding:8px 16px" onclick="openServiceTypeModal()">+ Novo</button>
+            </div>
+          </div>
+          <div class="db-overflow">
+            <table class="db-table">
+              <thead><tr>
+                <th>#</th>
+                <th>Tipo de Serviço</th>
+                <th></th>
+              </tr></thead>
+              <tbody id="db-body-servicetypes"></tbody>
+            </table>
+          </div>
         </div>
 
         <!-- CLIENTES -->
@@ -794,6 +795,27 @@
   </div>
 </div>
 
+<!-- MODAL TIPO DE SERVIÇO -->
+<div class="modal-overlay" id="modal-servicetype">
+  <div class="modal-box" style="max-width:420px">
+    <div class="modal-header">
+      <div class="modal-header-title" id="modal-st-title">Novo Tipo de Serviço</div>
+      <button type="button" class="modal-close" onclick="closeServiceTypeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Nome do tipo <span class="req">*</span></label>
+        <input type="text" id="st-name" placeholder="Ex.: Vigilância Patrimonial, Portaria…" autocomplete="new-password"/>
+        <span class="field-error" id="st-err-name">Campo obrigatório</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-ghost" onclick="closeServiceTypeModal()">Cancelar</button>
+      <button type="button" class="btn-primary" style="font-size:.62rem;padding:10px 22px" onclick="saveServiceType()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <!-- DIAGNÓSTICO FIREBASE FAB -->
 <button class="diag-fab" id="diag-fab" onclick="toggleDiag()" title="Diagnóstico Firebase">
   <div class="diag-dot" id="diag-dot"></div>
@@ -952,13 +974,15 @@ async function fbLoadAll(col){
 let services    = JSON.parse(localStorage.getItem('pj_services')   ||'[]');
 let clients     = JSON.parse(localStorage.getItem('pj_clients')    ||'[]');
 let supervisors = JSON.parse(localStorage.getItem('pj_supervisors')||'[]');
+let serviceTypes= JSON.parse(localStorage.getItem('pj_serviceTypes')||'["Vigilância Patrimonial","Portaria","Ronda","Escolta","Recepção","Brigadista"]');
 let multiDay = false, dayCount = 0, acIndex = -1;
 let editingClientId = null;
 
 function save(){
-  localStorage.setItem('pj_services',    JSON.stringify(services));
-  localStorage.setItem('pj_clients',     JSON.stringify(clients));
-  localStorage.setItem('pj_supervisors', JSON.stringify(supervisors));
+  localStorage.setItem('pj_services',     JSON.stringify(services));
+  localStorage.setItem('pj_clients',      JSON.stringify(clients));
+  localStorage.setItem('pj_supervisors',  JSON.stringify(supervisors));
+  localStorage.setItem('pj_serviceTypes', JSON.stringify(serviceTypes));
 }
 // Salva um item individual no Firestore também
 async function saveToFb(col, item){
@@ -1349,12 +1373,11 @@ function _forceSelect(id){
 
 function resetForm(){
   ['client-name','client-doc','client-contact','client-phone',
-   'service-name','service-location','service-desc',
+   'service-location','service-desc',
    'date-start','date-end','time-start','time-end',
-   'pay-collab','pay-obs','payment-value','payment-obs',
-   'supervisor-name','supervisor-obs'
+   'pay-collab','pay-obs','payment-value','payment-obs'
   ].forEach(_forceEmpty);
-  ['pay-collab-type','payment-type','payment-method-sel'].forEach(_forceSelect);
+  ['pay-collab-type','payment-type','payment-method-sel','service-name'].forEach(_forceSelect);
 
   const vagasEl = document.getElementById('vagas');
   if(vagasEl){ vagasEl.value = 1; vagasEl.defaultValue = 1; }
@@ -1373,10 +1396,9 @@ function resetForm(){
   // segunda passagem após render do browser
   requestAnimationFrame(()=>{
     ['client-name','client-doc','client-contact','client-phone',
-     'service-name','service-location','service-desc',
+     'service-location','service-desc',
      'date-start','date-end','time-start','time-end',
-     'pay-collab','pay-obs','payment-value','payment-obs',
-     'supervisor-name','supervisor-obs'
+     'pay-collab','pay-obs','payment-value','payment-obs'
     ].forEach(_forceEmpty);
   });
 }
@@ -1396,7 +1418,6 @@ function validate(){
     {id:'time-end',       err:'err-time-end'},
     {id:'pay-collab',     err:'err-pay-collab'},
     {id:'payment-value',  err:'err-payment'},
-    {id:'supervisor-name',err:'err-supervisor'},
   ];
   req.forEach(({id,err})=>{
     const el = document.getElementById(id);
@@ -1442,8 +1463,6 @@ document.getElementById('service-form').addEventListener('submit', function(e){
     payMethod:    document.getElementById('payment-method-sel').value,
     payCond:      cond ? cond.textContent : '',
     payClientObs: document.getElementById('payment-obs').value.trim(),
-    supervisor:   document.getElementById('supervisor-name').value.trim(),
-    supervisorObs:document.getElementById('supervisor-obs').value.trim(),
     status:       'pending',
     createdAt:    new Date().toLocaleDateString('pt-BR'),
   };
@@ -1495,19 +1514,114 @@ function switchTab(tab){
 // TROCA DE ABAS DO BANCO DE DADOS
 // ══════════════════════════════════════════
 function switchDbTab(name){
-  ['clients','supervisors','services'].forEach(t => {
+  ['clients','supervisors','servicetypes','services'].forEach(t => {
     document.getElementById('dbtab-'+t).classList.toggle('active', t===name);
     document.getElementById('dbpanel-'+t).classList.toggle('active', t===name);
   });
-  if(name==='clients')     renderClients();
-  if(name==='supervisors') renderSupervisors();
-  if(name==='services')    renderServices();
+  if(name==='clients')      renderClients();
+  if(name==='supervisors')  renderSupervisors();
+  if(name==='servicetypes') renderServiceTypes();
+  if(name==='services')     renderServices();
 }
 
 function renderAll(){
   renderClients();
   renderSupervisors();
+  renderServiceTypes();
   renderServices();
+}
+
+// ══════════════════════════════════════════
+// TIPOS DE SERVIÇO — CRUD
+// ══════════════════════════════════════════
+function renderServiceTypes(){
+  const q = (document.getElementById('db-search-servicetypes')?.value||'').toLowerCase();
+  const list = serviceTypes.filter(t => t.toLowerCase().includes(q));
+  document.getElementById('db-count-servicetypes').textContent = list.length+' tipo(s)';
+  const tbody = document.getElementById('db-body-servicetypes');
+  if(!list.length){
+    tbody.innerHTML = `<tr><td colspan="3" class="db-empty">Nenhum tipo cadastrado</td></tr>`;
+  } else {
+    tbody.innerHTML = list.map((t,i) => `
+      <tr>
+        <td style="color:var(--muted);font-family:'Orbitron',sans-serif;font-size:.6rem">${serviceTypes.indexOf(t)+1}</td>
+        <td><strong style="color:var(--white)">${t}</strong></td>
+        <td class="td-actions">
+          <button onclick="editServiceType(${serviceTypes.indexOf(t)})" title="Editar">✏️</button>
+          <button class="del" onclick="deleteServiceType(${serviceTypes.indexOf(t)})" title="Excluir">🗑</button>
+        </td>
+      </tr>`).join('');
+  }
+  populateServiceTypeSelect();
+}
+
+function populateServiceTypeSelect(){
+  const sel = document.getElementById('service-name');
+  if(!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Selecione o tipo…</option>' +
+    serviceTypes.map(t => `<option value="${t}"${t===cur?' selected':''}>${t}</option>`).join('');
+}
+
+let editingStIdx = null;
+
+function openServiceTypeModal(prefill){
+  editingStIdx = null;
+  const inp = document.getElementById('st-name');
+  inp.value = prefill||'';
+  inp.classList.remove('invalid');
+  document.getElementById('st-err-name').style.display = 'none';
+  document.getElementById('modal-st-title').textContent = 'Novo Tipo de Serviço';
+  document.getElementById('modal-servicetype').classList.add('open');
+  setTimeout(()=>inp.focus(), 50);
+}
+
+function closeServiceTypeModal(){
+  document.getElementById('modal-servicetype').classList.remove('open');
+  editingStIdx = null;
+}
+
+function saveServiceType(){
+  const inp  = document.getElementById('st-name');
+  const name = inp.value.trim();
+  if(!name){
+    inp.classList.add('invalid');
+    document.getElementById('st-err-name').style.display = 'block';
+    return;
+  }
+  if(editingStIdx !== null){
+    serviceTypes[editingStIdx] = name;
+    showToast('✓ Tipo "'+name+'" atualizado!');
+  } else {
+    if(serviceTypes.some(t => t.toLowerCase() === name.toLowerCase())){
+      showToast('Tipo "'+name+'" já existe!'); return;
+    }
+    serviceTypes.push(name);
+    showToast('✓ Tipo "'+name+'" adicionado!');
+  }
+  save();
+  renderServiceTypes();
+  closeServiceTypeModal();
+}
+
+function editServiceType(idx){
+  editingStIdx = idx;
+  const inp = document.getElementById('st-name');
+  inp.value = serviceTypes[idx];
+  inp.classList.remove('invalid');
+  document.getElementById('st-err-name').style.display = 'none';
+  document.getElementById('modal-st-title').textContent = 'Editar Tipo de Serviço';
+  document.getElementById('modal-servicetype').classList.add('open');
+  setTimeout(()=>inp.focus(), 50);
+}
+
+function deleteServiceType(idx){
+  const name = serviceTypes[idx];
+  if(!confirm('Excluir o tipo "'+name+'"?')) return;
+  serviceTypes.splice(idx, 1);
+  save();
+  renderServiceTypes();
+  showToast('Tipo "'+name+'" excluído.');
 }
 
 // ══════════════════════════════════════════
@@ -1748,6 +1862,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   updateAlerts();
   document.getElementById('panel-form').style.display = 'block';
   document.getElementById('panel-db').style.display   = 'none';
+  populateServiceTypeSelect();
 
   // Carrega Firebase SDKs dinamicamente e depois inicializa
   function loadScript(src, cb){
