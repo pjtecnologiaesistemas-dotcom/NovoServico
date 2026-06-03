@@ -272,6 +272,29 @@
     .svc-card-vagas-txt{font-family:'Orbitron',sans-serif;font-size:.58rem;font-weight:700;color:var(--muted)}
     .svc-card-loc{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
 
+    /* ── ESCALA SELECTOR ── */
+    .escala-wrap{display:flex;gap:8px;margin-top:4px}
+    .escala-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;background:var(--surface2);border:1px solid rgba(0,200,248,.12);border-radius:var(--radius);padding:10px 8px;cursor:pointer;transition:all .2s;user-select:none;position:relative}
+    .escala-btn:hover{border-color:rgba(0,200,248,.3)}
+    .escala-btn .escala-dot{width:8px;height:8px;border-radius:50%;border:2px solid var(--muted);background:transparent;flex-shrink:0;transition:all .2s}
+    .escala-btn .escala-label{font-family:'Rajdhani',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);transition:color .2s}
+    .escala-btn .escala-icon{font-size:.9rem;opacity:.5;transition:opacity .2s}
+    /* PAR — azul ciano */
+    .escala-btn[data-val="par"].active{background:rgba(0,200,248,.1);border-color:var(--cyan);box-shadow:0 0 12px rgba(0,200,248,.15)}
+    .escala-btn[data-val="par"].active .escala-dot{background:var(--cyan2);border-color:var(--cyan2);box-shadow:0 0 6px var(--cyan2)}
+    .escala-btn[data-val="par"].active .escala-label{color:var(--cyan2)}
+    .escala-btn[data-val="par"].active .escala-icon{opacity:1}
+    /* ÍMPAR — amarelo âmbar */
+    .escala-btn[data-val="impar"].active{background:rgba(240,165,0,.1);border-color:var(--warn);box-shadow:0 0 12px rgba(240,165,0,.15)}
+    .escala-btn[data-val="impar"].active .escala-dot{background:var(--warn);border-color:var(--warn);box-shadow:0 0 6px var(--warn)}
+    .escala-btn[data-val="impar"].active .escala-label{color:var(--warn)}
+    .escala-btn[data-val="impar"].active .escala-icon{opacity:1}
+    /* TODO — verde */
+    .escala-btn[data-val="todo"].active{background:rgba(63,207,142,.1);border-color:var(--success);box-shadow:0 0 12px rgba(63,207,142,.15)}
+    .escala-btn[data-val="todo"].active .escala-dot{background:var(--success);border-color:var(--success);box-shadow:0 0 6px var(--success)}
+    .escala-btn[data-val="todo"].active .escala-label{color:var(--success)}
+    .escala-btn[data-val="todo"].active .escala-icon{opacity:1}
+
     /* modal genérico reutilizável */
     #modal-supervisor .modal-box,#modal-service-view .modal-box{max-width:540px}
 
@@ -498,6 +521,27 @@
           <button type="button" class="add-day-btn" onclick="addDaySchedule()"><span>＋</span> Adicionar dia com horário diferente</button>
         </div>
       </div>
+      <!-- ESCALA -->
+      <div class="field" style="margin-top:16px">
+        <label>Escala de rodízio</label>
+        <div class="escala-wrap" id="escala-wrap">
+          <div class="escala-btn" data-val="par" onclick="selectEscala('par')">
+            <span class="escala-dot"></span>
+            <span class="escala-icon">☀️</span>
+            <span class="escala-label">Par</span>
+          </div>
+          <div class="escala-btn" data-val="impar" onclick="selectEscala('impar')">
+            <span class="escala-dot"></span>
+            <span class="escala-icon">🌙</span>
+            <span class="escala-label">Ímpar</span>
+          </div>
+          <div class="escala-btn active" data-val="todo" onclick="selectEscala('todo')">
+            <span class="escala-dot"></span>
+            <span class="escala-icon">✅</span>
+            <span class="escala-label">Todo</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- 4. EQUIPE E REMUNERAÇÃO -->
@@ -542,16 +586,21 @@
 
     <!-- 5. FINANCEIRO CLIENTE -->
     <div class="section">
-      <div class="section-header">
+      <div class="section-header" style="margin-bottom:0;cursor:pointer;user-select:none" onclick="toggleFinanceiro()">
         <div class="section-num">5</div>
         <h2 class="section-title">Financeiro — Cliente</h2>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+          <span id="fin-status-badge" style="font-family:'Rajdhani',sans-serif;font-size:.6rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);padding:3px 10px;border:1px solid rgba(0,200,248,.15);border-radius:4px">Opcional</span>
+          <button type="button" id="fin-toggle-btn" style="background:rgba(0,200,248,.08);border:1px solid rgba(0,200,248,.2);border-radius:6px;color:var(--cyan);font-family:'Orbitron',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:6px 14px;cursor:pointer;transition:all .2s;white-space:nowrap">▼ Preencher</button>
+        </div>
       </div>
+      <div id="fin-body" style="display:none;margin-top:18px">
       <div class="grid-3">
         <div class="field">
-          <label>Valor cobrado do cliente <span class="req">*</span></label>
+          <label>Valor cobrado do cliente</label>
           <div class="currency-wrap">
             <span class="pre">R$</span>
-            <input type="number" id="payment-value" placeholder="0,00" min="0" step="0.01" required autocomplete="new-password"/>
+            <input type="number" id="payment-value" placeholder="0,00" min="0" step="0.01" autocomplete="new-password"/>
           </div>
           <span class="field-error" id="err-payment">Informe o valor</span>
         </div>
@@ -591,6 +640,7 @@
         <label>Observação financeira</label>
         <input type="text" id="payment-obs" placeholder="Ex.: NF solicitada, desconto aplicado…" autocomplete="new-password"/>
       </div>
+      </div><!-- /fin-body -->
     </div>
 
     <!-- SUBMIT -->
@@ -1043,6 +1093,7 @@ function closeBalloon(){
 
 function renderBalloon(list){
   const fmt = d => d ? new Date(d+'T00:00:00').toLocaleDateString('pt-BR') : '—';
+  const escalaMap = {par:'☀️ Par', impar:'🌙 Ímpar', todo:'✅ Todo'};
   // Monta opções de supervisores cadastrados
   const supOptions = supervisors.length
     ? supervisors.map(s => `<option value="${s.name}">${s.name}${s.role?' — '+s.role:''}</option>`).join('')
@@ -1055,6 +1106,7 @@ function renderBalloon(list){
         <span class="balert-tag">📍 ${svc.location||'—'}</span>
         <span class="balert-tag">👥 ${svc.vagas} vaga(s)</span>
         <span class="balert-tag">💰 R$ ${svc.payCollab.toLocaleString('pt-BR',{minimumFractionDigits:2})} / colab</span>
+        <span class="balert-tag">🔄 Escala: ${escalaMap[svc.escala||'todo']}</span>
       </div>
       <div class="balert-sup-wrap">
         <span class="balert-sup-label">🎖 Supervisor que fez a cobertura *</span>
@@ -1344,6 +1396,16 @@ function selectPill(el, group){
   el.classList.add('selected');
 }
 
+function selectEscala(val){
+  document.querySelectorAll('#escala-wrap .escala-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`#escala-wrap [data-val="${val}"]`)?.classList.add('active');
+}
+
+function getEscala(){
+  const active = document.querySelector('#escala-wrap .escala-btn.active');
+  return active ? active.dataset.val : 'todo';
+}
+
 // ══════════════════════════════════════════
 // RESUMO
 // ══════════════════════════════════════════
@@ -1397,6 +1459,7 @@ function resetForm(){
 
   document.getElementById('submit-summary').innerHTML = 'Preencha os campos obrigatórios para lançar o serviço.';
   document.querySelectorAll('.pill').forEach(p => p.classList.remove('selected'));
+  selectEscala('todo');
   document.querySelectorAll('.invalid').forEach(el => el.classList.remove('invalid'));
   document.querySelectorAll('.field-error').forEach(el => { el.style.display='none'; el.textContent='Campo obrigatório'; });
 
@@ -1430,7 +1493,6 @@ function validate(){
     {id:'time-start',     err:'err-time-start'},
     {id:'time-end',       err:'err-time-end'},
     {id:'pay-collab',     err:'err-pay-collab'},
-    {id:'payment-value',  err:'err-payment'},
   ];
   req.forEach(({id,err})=>{
     const el = document.getElementById(id);
@@ -1467,6 +1529,7 @@ document.getElementById('service-form').addEventListener('submit', function(e){
     dateEnd:      document.getElementById('date-end').value,
     timeStart:    document.getElementById('time-start').value,
     timeEnd:      document.getElementById('time-end').value,
+    escala:       getEscala(),
     vagas,        coberturas:0, coverObs:'', coverDetails:[],
     payCollab:    parseFloat(document.getElementById('pay-collab').value)||0,
     payCollabType:document.getElementById('pay-collab-type').value,
@@ -1825,6 +1888,8 @@ function renderServices(){
     const fillCls=cob>=vag?'full':cob>0?'partial':'empty';
     const payVal=s.payClient?'R$ '+(s.payClient).toLocaleString('pt-BR',{minimumFractionDigits:2}):'—';
     const periodo=s.dateStart?(fmt(s.dateStart)+(s.dateEnd&&s.dateEnd!==s.dateStart?' → '+fmt(s.dateEnd):'')):'—';
+    const escalaMap={par:{label:'Par',icon:'☀️',color:'var(--cyan2)',bg:'rgba(0,200,248,.1)',border:'rgba(0,200,248,.25)'},impar:{label:'Ímpar',icon:'🌙',color:'var(--warn)',bg:'rgba(240,165,0,.1)',border:'rgba(240,165,0,.25)'},todo:{label:'Todo',icon:'✅',color:'var(--success)',bg:'rgba(63,207,142,.1)',border:'rgba(63,207,142,.25)'}};
+    const esc=escalaMap[s.escala||'todo'];
     return `
     <div class="svc-card">
       <div class="svc-card-top">
@@ -1855,9 +1920,12 @@ function renderServices(){
         </div>
       </div>
       <div class="svc-card-bottom">
-        <div class="svc-card-vagas">
-          <div class="svc-card-vagas-bar"><div class="svc-card-vagas-fill ${fillCls}" style="width:${pct}%"></div></div>
-          <div class="svc-card-vagas-txt">${cob}/${vag} vaga${vag!==1?'s':''}</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="svc-card-vagas">
+            <div class="svc-card-vagas-bar"><div class="svc-card-vagas-fill ${fillCls}" style="width:${pct}%"></div></div>
+            <div class="svc-card-vagas-txt">${cob}/${vag} vaga${vag!==1?'s':''}</div>
+          </div>
+          <span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 9px;border-radius:4px;background:${esc.bg};border:1px solid ${esc.border};color:${esc.color}">${esc.icon} ${esc.label}</span>
         </div>
         <div class="svc-card-actions">
           <button onclick="viewService(${s.id})" title="Ver detalhes">👁 Ver</button>
@@ -1879,6 +1947,7 @@ function viewService(id){
       <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Local</span><div style="margin-top:3px">${s.location||'—'}</div></div>
       <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Período</span><div style="margin-top:3px">${fmt(s.dateStart)} → ${fmt(s.dateEnd)}</div></div>
       <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Horário</span><div style="margin-top:3px">${s.timeStart||'—'} – ${s.timeEnd||'—'}</div></div>
+      <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Escala de Rodízio</span><div style="margin-top:4px">${(()=>{const m={par:{label:'Par',icon:'☀️',color:'var(--cyan2)'},impar:{label:'Ímpar',icon:'🌙',color:'var(--warn)'},todo:{label:'Todo',icon:'✅',color:'var(--success)'}};const e=m[s.escala||'todo'];return `<span style="font-weight:700;color:${e.color}">${e.icon} ${e.label}</span>`;})()}</div></div>
       <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Vagas / Cobertura</span><div style="color:var(--cyan);margin-top:3px">${s.coberturas||0} / ${s.vagas||1}</div></div>
       <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Valor cliente</span><div style="color:var(--accent);margin-top:3px">R$ ${(s.payClient||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</div></div>
       <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Valor colaborador</span><div style="margin-top:3px">R$ ${(s.payCollab||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</div></div>
@@ -2053,6 +2122,19 @@ async function diagSyncToFirestore(){
     diagLog('err', 'Sync falhou: '+e.message);
     showToast('Erro no sync: '+e.code);
   }
+}
+
+function toggleFinanceiro(){
+  const body  = document.getElementById('fin-body');
+  const btn   = document.getElementById('fin-toggle-btn');
+  const badge = document.getElementById('fin-status-badge');
+  const open  = body.style.display === 'none' || body.style.display === '';
+  body.style.display  = open ? 'block' : 'none';
+  btn.textContent     = open ? '▲ Fechar' : '▼ Preencher';
+  btn.style.background = open ? 'rgba(0,200,248,.18)' : 'rgba(0,200,248,.08)';
+  badge.textContent   = open ? 'Preenchendo' : 'Opcional';
+  badge.style.color   = open ? 'var(--cyan2)' : 'var(--muted)';
+  badge.style.borderColor = open ? 'rgba(0,200,248,.4)' : 'rgba(0,200,248,.15)';
 }
 
 function toggleDiag(){
