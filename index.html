@@ -273,6 +273,15 @@
     .svc-cards{display:flex;flex-direction:column;gap:10px}
     .svc-card{background:var(--surface2);border:1px solid rgba(0,200,248,.12);border-radius:12px;overflow:hidden;transition:border-color .2s,box-shadow .2s;animation:fadeSlide .2s ease}
     .svc-card:hover{border-color:rgba(0,200,248,.28);box-shadow:0 4px 20px rgba(0,0,0,.4)}
+    /* ── CARD PENDENTE — destaque âmbar até confirmação ── */
+    .svc-card.pendente{background:linear-gradient(160deg,rgba(240,165,0,.16) 0%,rgba(180,110,0,.10) 100%);border:1.5px solid rgba(240,165,0,.55);box-shadow:0 0 0 0 rgba(240,165,0,.3)}
+    .svc-card.pendente:hover{border-color:rgba(240,165,0,.8);box-shadow:0 4px 22px rgba(240,165,0,.2)}
+    .svc-card.pendente .svc-card-top{border-bottom-color:rgba(240,165,0,.15);background:rgba(240,165,0,.06)}
+    .svc-card.pendente .svc-card-bottom{border-top-color:rgba(240,165,0,.12)}
+    .svc-card.pendente .svc-card-client{color:#ffe08a}
+    .svc-card.pendente .svc-card-label{color:rgba(240,165,0,.6)}
+    @keyframes pendentePulse{0%,100%{box-shadow:0 0 10px rgba(240,165,0,.12),0 2px 14px rgba(0,0,0,.4)}50%{box-shadow:0 0 24px rgba(240,165,0,.32),0 2px 18px rgba(0,0,0,.5)}}
+    .svc-card.pendente{animation:fadeSlide .2s ease,pendentePulse 2.8s ease-in-out infinite}
     .svc-card-top{display:flex;align-items:center;gap:10px;padding:12px 14px 9px;border-bottom:1px solid rgba(0,200,248,.07)}
     .svc-card-client{font-family:'Rajdhani',sans-serif;font-size:.88rem;font-weight:700;color:var(--white);letter-spacing:.5px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .svc-card-type{font-family:'Rajdhani',sans-serif;font-size:.6rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--cyan);background:rgba(0,200,248,.09);border:1px solid rgba(0,200,248,.18);border-radius:4px;padding:2px 8px;white-space:nowrap;flex-shrink:0}
@@ -1970,8 +1979,9 @@ function renderServices(){
     const periodo=s.dateStart?(fmt(s.dateStart)+(s.dateEnd&&s.dateEnd!==s.dateStart?' → '+fmt(s.dateEnd):'')):'—';
     const escalaMap={par:{label:'Par',icon:'☀️',color:'var(--cyan2)',bg:'rgba(0,200,248,.1)',border:'rgba(0,200,248,.25)'},impar:{label:'Ímpar',icon:'🌙',color:'var(--warn)',bg:'rgba(240,165,0,.1)',border:'rgba(240,165,0,.25)'},todo:{label:'Todo',icon:'✅',color:'var(--success)',bg:'rgba(63,207,142,.1)',border:'rgba(63,207,142,.25)'}};
     const esc=escalaMap[s.escala||'todo'];
+    const isPending = s.status !== 'done' && s.status !== 'partial';
     return `
-    <div class="svc-card">
+    <div class="svc-card${isPending?' pendente':''}">
       <div class="svc-card-top">
         <div class="svc-card-client" title="${s.client}">${s.client}</div>
         ${s.service?`<div class="svc-card-type">${s.service}</div>`:''}
