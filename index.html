@@ -5,9 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>PJ Tecnologia — Novo Serviço</title>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@300;400;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
-  <!-- Firebase SDK (compat) -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{
@@ -876,17 +873,16 @@ function initFirebase(){
     if (typeof firebase.firestore === 'undefined') throw new Error('firestore-compat não carregado');
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
-    // Teste imediato para confirmar que o objeto está funcional
     if (typeof db.collection !== 'function') throw new Error('db.collection não é função');
     fbReady = true;
-    diagLog('ok', 'Firebase + Firestore inicializados');
+    fbError = null;
   } catch(e) {
     fbError = e.message;
     fbReady = false;
-    diagLog('err', 'Erro init Firebase: ' + e.message);
+    db = null;
   }
 }
-initFirebase();
+// initFirebase() será chamado após os SDKs carregarem (no final do body)
 
 // Utilitários Firebase
 async function fbSave(col, id, data){
@@ -1630,11 +1626,25 @@ function deleteService(id){
 
 document.addEventListener('DOMContentLoaded', ()=>{
   updateAlerts();
-  // garante painel correto visível ao carregar
   document.getElementById('panel-form').style.display = 'block';
   document.getElementById('panel-db').style.display   = 'none';
-  // inicia diagnóstico
-  setTimeout(diagRefresh, 800);
+
+  // Carrega Firebase SDKs dinamicamente e depois inicializa
+  function loadScript(src, cb){
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = cb;
+    s.onerror = () => { fbError = 'Falha ao carregar: '+src; diagLog('err', fbError); diagRefresh(); };
+    document.body.appendChild(s);
+  }
+  loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js', ()=>{
+    loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js', ()=>{
+      initFirebase();
+      if(fbReady) diagLog('ok', 'Firebase + Firestore prontos');
+      else        diagLog('err', 'Falha no init: ' + fbError);
+      diagRefresh();
+    });
+  });
 });
 
 // ══════════════════════════════════════════
