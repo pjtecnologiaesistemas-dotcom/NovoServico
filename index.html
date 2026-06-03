@@ -1,0 +1,1763 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PJ Tecnologia — Novo Serviço</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@300;400;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <!-- Firebase SDK (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --navy:#050d1a;--blue1:#0a1f3d;--blue2:#0d3878;
+      --cyan:#00c8f8;--cyan2:#00eaff;--silver:#c8d8f0;--white:#eef4ff;
+      --accent:#f0a500;--surface:#0c1828;--surface2:#0f1f35;--surface3:#162540;
+      --border:rgba(0,200,248,.15);--border2:rgba(0,200,248,.08);
+      --muted:#6a80a0;--text:#ddeeff;--danger:#e05c5c;--success:#3fcf8e;
+      --warn:#f0a500;--radius:10px;
+    }
+    html{scroll-behavior:smooth}
+    body{background:var(--navy);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center}
+    body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,200,248,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,200,248,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+    body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 50% at 50% 0%,rgba(0,56,120,.4) 0%,transparent 65%);pointer-events:none;z-index:0}
+
+    /* ── HEADER ── */
+    .site-header{position:relative;z-index:10;width:100%;background:linear-gradient(180deg,rgba(5,13,26,.98) 0%,rgba(8,20,42,.95) 100%);border-bottom:1px solid rgba(0,200,248,.2);box-shadow:0 4px 32px rgba(0,0,0,.5);padding:0 32px}
+    .site-header-inner{max-width:1100px;margin:0 auto;height:64px;display:flex;align-items:center;justify-content:space-between;gap:20px}
+    .logo-inline{display:flex;align-items:center;gap:12px;text-decoration:none;flex-shrink:0}
+    .logo-hex-sm{position:relative;width:36px;height:40px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .logo-hex-sm svg{position:absolute;inset:0;width:100%;height:100%;filter:drop-shadow(0 0 8px rgba(0,200,248,.5));animation:hexPulse 3s ease-in-out infinite}
+    @keyframes hexPulse{0%,100%{filter:drop-shadow(0 0 6px rgba(0,200,248,.35))}50%{filter:drop-shadow(0 0 16px rgba(0,234,255,.65))}}
+    .mono-sm{font-family:'Orbitron',sans-serif;font-weight:900;font-size:.82rem;letter-spacing:-1px;color:#fff;position:relative;z-index:2;text-shadow:0 0 12px rgba(0,234,255,.6);line-height:1}
+    .mono-sm span{color:var(--cyan2)}
+    .logo-text-sm{display:flex;flex-direction:column;gap:1px}
+    .logo-name-sm{font-family:'Orbitron',sans-serif;font-size:.75rem;font-weight:700;letter-spacing:2px;color:var(--white);text-transform:uppercase;line-height:1}
+    .logo-name-sm .pj-sm{color:var(--cyan2);text-shadow:0 0 12px rgba(0,234,255,.4)}
+    .logo-name-sm .sep-sm{color:rgba(0,200,248,.3);margin:0 3px}
+    .logo-sub-sm{font-family:'Rajdhani',sans-serif;font-size:.58rem;font-weight:400;letter-spacing:4px;text-transform:uppercase;color:var(--cyan);opacity:.6}
+    .header-divider-v{width:1px;height:28px;background:linear-gradient(180deg,transparent,rgba(0,200,248,.4),transparent);flex-shrink:0}
+    .header-tagline{font-family:'Rajdhani',sans-serif;font-size:.68rem;letter-spacing:2px;text-transform:uppercase;color:var(--silver);opacity:.5;line-height:1.5}
+    .header-tagline strong{color:var(--accent);font-weight:600;opacity:1}
+    .header-badge{font-family:'Rajdhani',sans-serif;font-size:.65rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);border:1px solid rgba(0,200,248,.25);border-radius:4px;padding:5px 10px;opacity:.75;white-space:nowrap;flex-shrink:0}
+    @media(max-width:600px){.header-tagline,.header-divider-v{display:none}.site-header{padding:0 16px}}
+
+    /* ── SINO ── */
+    .bell-btn{position:relative;background:none;border:1px solid rgba(0,200,248,.2);border-radius:8px;color:var(--silver);cursor:pointer;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;transition:all .2s;flex-shrink:0}
+    .bell-btn:hover{border-color:var(--cyan);color:var(--cyan);background:rgba(0,200,248,.06)}
+    .bell-btn.has-alerts{border-color:rgba(240,165,0,.4);color:var(--warn);animation:bellShake 2.5s ease-in-out infinite}
+    @keyframes bellShake{0%,100%{transform:rotate(0)}10%{transform:rotate(-12deg)}20%{transform:rotate(12deg)}30%{transform:rotate(-8deg)}40%{transform:rotate(8deg)}50%{transform:rotate(0)}}
+    .bell-badge{position:absolute;top:-6px;right:-6px;background:var(--danger);color:#fff;font-family:'Orbitron',sans-serif;font-size:.52rem;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:none;align-items:center;justify-content:center;padding:0 4px;border:2px solid var(--navy);animation:badgePop .3s cubic-bezier(.34,1.56,.64,1)}
+    @keyframes badgePop{from{transform:scale(0)}to{transform:scale(1)}}
+
+    /* ── OVERLAY ── */
+    .alert-overlay{position:fixed;inset:0;z-index:200;opacity:0;pointer-events:none}
+    .alert-overlay.open{opacity:1;pointer-events:all}
+
+    /* ── BALÃO VERMELHO ── */
+    .alert-balloon{position:fixed;top:74px;right:24px;width:340px;max-width:calc(100vw - 32px);background:linear-gradient(160deg,#2a0808 0%,#1a0404 100%);border:1.5px solid rgba(224,92,92,.55);border-radius:14px;box-shadow:0 8px 48px rgba(224,92,92,.35),0 2px 16px rgba(0,0,0,.7);z-index:201;display:none;flex-direction:column;overflow:hidden;animation:balloonPop .25s cubic-bezier(.34,1.56,.64,1);transform-origin:top right}
+    .alert-balloon.open{display:flex}
+    @keyframes balloonPop{from{opacity:0;transform:scale(.88)}to{opacity:1;transform:scale(1)}}
+    .alert-balloon::before{content:'';position:absolute;top:-8px;right:18px;width:14px;height:14px;background:#2a0808;border-top:1.5px solid rgba(224,92,92,.55);border-left:1.5px solid rgba(224,92,92,.55);transform:rotate(45deg);border-radius:2px 0 0 0}
+    .balloon-header{background:linear-gradient(90deg,rgba(224,92,92,.22) 0%,rgba(224,92,92,.08) 100%);border-bottom:1px solid rgba(224,92,92,.25);padding:12px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+    .balloon-header-icon{font-size:1rem;line-height:1;flex-shrink:0}
+    .balloon-header-title{font-family:'Orbitron',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:2px;color:#ffaaaa;flex:1}
+    .balloon-header-count{background:var(--danger);color:#fff;font-family:'Orbitron',sans-serif;font-size:.55rem;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0}
+    .balloon-close{background:none;border:none;color:rgba(255,150,150,.5);font-size:1rem;cursor:pointer;padding:2px 4px;line-height:1;transition:color .2s;flex-shrink:0}
+    .balloon-close:hover{color:#ffaaaa}
+    .balloon-body{max-height:340px;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+    .balloon-body::-webkit-scrollbar{width:3px}
+    .balloon-body::-webkit-scrollbar-thumb{background:rgba(224,92,92,.3);border-radius:2px}
+    .balloon-footer{padding:9px 14px;border-top:1px solid rgba(224,92,92,.15);font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,150,150,.45);text-align:center;flex-shrink:0}
+    .balert-item{background:rgba(224,92,92,.07);border:1px solid rgba(224,92,92,.2);border-left:3px solid var(--danger);border-radius:8px;padding:11px 12px 10px;animation:alertSlide .25s ease}
+    @keyframes alertSlide{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+    .balert-client{font-family:'Orbitron',sans-serif;font-size:.62rem;font-weight:700;color:#ffcccc;letter-spacing:.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
+    .balert-detail{font-family:'Rajdhani',sans-serif;font-size:.7rem;letter-spacing:.5px;color:rgba(255,180,180,.7);margin-bottom:7px;line-height:1.4}
+    .balert-tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+    .balert-tag{font-family:'Rajdhani',sans-serif;font-size:.58rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;padding:2px 8px;border-radius:4px;background:rgba(224,92,92,.12);border:1px solid rgba(224,92,92,.22);color:#ffaaaa}
+    .balert-actions{display:flex;gap:6px}
+    .btn-balert-cover{flex:1;background:rgba(63,207,142,.12);border:1px solid rgba(63,207,142,.28);border-radius:6px;color:var(--success);font-family:'Orbitron',sans-serif;font-size:.52rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:7px 10px;cursor:pointer;transition:all .2s}
+    .btn-balert-cover:hover{background:rgba(63,207,142,.22)}
+
+    /* ── MAIN ── */
+    .main-wrap{position:relative;z-index:1;width:100%;max-width:1100px;padding:0 32px 60px}
+    @media(max-width:600px){.main-wrap{padding:0 16px 40px}}
+
+    /* ── CARD ── */
+    .card{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:0 12px 12px 12px;overflow:hidden;box-shadow:0 8px 48px rgba(0,0,0,.5)}
+
+    /* ── SECTION ── */
+    .section{padding:24px 28px;border-bottom:1px solid var(--border2)}
+    .section:last-child{border-bottom:none}
+    @media(max-width:560px){.section{padding:18px 14px}}
+    .section-header{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+    .section-num{width:24px;height:24px;background:linear-gradient(135deg,var(--cyan) 0%,var(--blue2) 100%);color:var(--navy);border-radius:50%;font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 10px rgba(0,200,248,.3)}
+    .section-title{font-family:'Rajdhani',sans-serif;font-size:.95rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--white)}
+
+    /* ── GRID ── */
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+    .grid-4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px}
+    @media(max-width:700px){.grid-4{grid-template-columns:1fr 1fr}}
+    @media(max-width:560px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr}}
+
+    /* ── FIELDS ── */
+    .field{display:flex;flex-direction:column;gap:5px}
+    label{font-family:'Rajdhani',sans-serif;font-size:.65rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+    label span.req{color:var(--cyan);margin-left:2px}
+    input,select,textarea{background:var(--surface2);border:1px solid rgba(0,200,248,.12);border-radius:var(--radius);color:var(--white);font-family:'DM Sans',sans-serif;font-size:13.5px;padding:10px 13px;width:100%;transition:border-color .2s,box-shadow .2s;outline:none;-webkit-appearance:none}
+    input:focus,select:focus,textarea:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,200,248,.1)}
+    input::placeholder,textarea::placeholder{color:var(--muted);opacity:.5}
+    select{cursor:pointer}
+    select option{background:#0a1f3d}
+    textarea{resize:vertical;min-height:72px}
+    .field-error{font-size:11px;color:var(--danger);margin-top:2px;display:none}
+    input.invalid,select.invalid{border-color:var(--danger)!important}
+
+    /* currency */
+    .currency-wrap{position:relative}
+    .currency-wrap .pre{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:700;color:var(--accent);pointer-events:none}
+    .currency-wrap input{padding-left:38px}
+
+    /* vagas counter */
+    .vagas-wrap{display:flex;align-items:center;gap:0;border:1px solid rgba(0,200,248,.12);border-radius:var(--radius);overflow:hidden;background:var(--surface2)}
+    .vagas-wrap button{background:rgba(0,200,248,.08);border:none;color:var(--cyan);font-size:1.1rem;font-weight:700;width:40px;height:42px;cursor:pointer;transition:background .2s;flex-shrink:0}
+    .vagas-wrap button:hover{background:rgba(0,200,248,.2)}
+    .vagas-wrap input{border:none;border-radius:0;text-align:center;font-family:'Orbitron',sans-serif;font-size:.9rem;font-weight:700;color:var(--cyan2);background:transparent;width:100%}
+    .vagas-wrap input:focus{box-shadow:none}
+
+    /* toggle */
+    .toggle-wrap{display:flex;align-items:center;gap:12px;background:var(--surface2);border:1px solid rgba(0,200,248,.12);border-radius:var(--radius);padding:11px 14px;cursor:pointer;user-select:none;transition:border-color .2s}
+    .toggle-wrap:hover{border-color:var(--cyan)}
+    .toggle{width:34px;height:20px;background:rgba(0,200,248,.12);border:1px solid rgba(0,200,248,.18);border-radius:10px;position:relative;transition:background .25s;flex-shrink:0}
+    .toggle::after{content:'';width:14px;height:14px;background:var(--muted);border-radius:50%;position:absolute;top:2px;left:2px;transition:transform .25s,background .25s}
+    .toggle.active{background:rgba(0,200,248,.22);border-color:var(--cyan)}
+    .toggle.active::after{transform:translateX(14px);background:var(--cyan2);box-shadow:0 0 8px var(--cyan2)}
+    .toggle-label{font-size:13px;color:var(--white)}
+    .toggle-sub{font-size:11px;color:var(--muted);margin-top:1px}
+
+    /* day schedule */
+    #special-schedules{margin-top:14px}
+    .day-schedule{background:rgba(0,200,248,.04);border:1px solid rgba(0,200,248,.13);border-radius:var(--radius);padding:13px 14px;margin-bottom:10px;animation:fadeSlide .25s ease}
+    @keyframes fadeSlide{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+    .day-schedule-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .day-schedule-header span{font-family:'Rajdhani',sans-serif;font-size:.62rem;font-weight:600;letter-spacing:2.5px;text-transform:uppercase;color:var(--cyan)}
+    .remove-day{background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;transition:color .2s;padding:0 4px}
+    .remove-day:hover{color:var(--danger)}
+    .add-day-btn{display:flex;align-items:center;gap:8px;background:none;border:1px dashed rgba(0,200,248,.18);border-radius:var(--radius);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:12.5px;padding:10px 15px;width:100%;cursor:pointer;transition:border-color .2s,color .2s}
+    .add-day-btn:hover{border-color:var(--cyan);color:var(--cyan)}
+
+    /* pills */
+    .pill-group{display:flex;flex-wrap:wrap;gap:7px}
+    .pill{background:var(--surface2);border:1px solid rgba(0,200,248,.12);border-radius:50px;padding:6px 14px;font-family:'Rajdhani',sans-serif;font-size:.68rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);cursor:pointer;transition:all .18s;user-select:none}
+    .pill:hover{border-color:var(--cyan);color:var(--white)}
+    .pill.selected{background:rgba(0,200,248,.15);border-color:var(--cyan);color:var(--cyan2);box-shadow:0 0 8px rgba(0,200,248,.15)}
+
+    /* submit */
+    .submit-section{padding:20px 28px;background:linear-gradient(180deg,var(--surface2) 0%,rgba(5,13,26,.8) 100%);border-top:1px solid rgba(0,200,248,.15);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+    .submit-summary{font-size:12.5px;color:var(--muted);line-height:1.7;font-family:'Rajdhani',sans-serif;letter-spacing:.5px}
+    .submit-summary strong{color:var(--white);font-weight:600}
+    .btn-primary{background:linear-gradient(135deg,var(--cyan) 0%,#0088cc 100%);border:none;border-radius:var(--radius);color:var(--navy);cursor:pointer;font-family:'Orbitron',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:12px 26px;transition:opacity .2s,transform .15s,box-shadow .2s;white-space:nowrap;box-shadow:0 0 20px rgba(0,200,248,.25)}
+    .btn-primary:hover{opacity:.9;transform:translateY(-1px);box-shadow:0 0 30px rgba(0,200,248,.4)}
+    .btn-primary:active{transform:translateY(0)}
+    .btn-ghost{background:transparent;border:1px solid rgba(0,200,248,.25);border-radius:var(--radius);color:var(--cyan);cursor:pointer;font-family:'Orbitron',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:9px 18px;transition:all .2s;white-space:nowrap}
+    .btn-ghost:hover{background:rgba(0,200,248,.08);border-color:var(--cyan)}
+
+    /* ── NAV TABS ── */
+    .nav-tabs{position:relative;z-index:5;width:100%;max-width:1100px;padding:24px 32px 0;display:flex;gap:4px}
+    @media(max-width:600px){.nav-tabs{padding:16px 16px 0}}
+    .nav-tab{font-family:'Rajdhani',sans-serif;font-size:.72rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;padding:10px 20px;border-radius:8px 8px 0 0;border:1px solid transparent;border-bottom:none;color:var(--cyan2);background:var(--surface);border-color:var(--border);border-bottom-color:var(--surface)}
+
+    /* ── AUTOCOMPLETE ── */
+    .ac-wrap{position:relative}
+    .ac-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:100;max-height:220px;overflow-y:auto;display:none}
+    .ac-dropdown.open{display:block}
+    .ac-dropdown::-webkit-scrollbar{width:3px}
+    .ac-dropdown::-webkit-scrollbar-thumb{background:rgba(0,200,248,.2);border-radius:2px}
+    .ac-item{padding:10px 13px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border2);transition:background .15s}
+    .ac-item:last-child{border-bottom:none}
+    .ac-item:hover,.ac-item.active{background:rgba(0,200,248,.08)}
+    .ac-item-name{font-size:13px;color:var(--white);flex:1}
+    .ac-item-doc{font-family:'Rajdhani',sans-serif;font-size:.62rem;letter-spacing:1px;color:var(--muted)}
+    .ac-item-new{padding:10px 13px;cursor:pointer;display:flex;align-items:center;gap:8px;color:var(--cyan);font-size:12.5px;transition:background .15s;border-top:1px solid var(--border2)}
+    .ac-item-new:hover{background:rgba(0,200,248,.06)}
+    .ac-item-new span{font-family:'Orbitron',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:1px;background:rgba(0,200,248,.12);border:1px solid rgba(0,200,248,.2);border-radius:4px;padding:2px 7px;color:var(--cyan2)}
+
+    /* ── MODAL ── */
+    .modal-overlay{position:fixed;inset:0;background:rgba(5,13,26,.75);backdrop-filter:blur(3px);z-index:300;display:none;align-items:center;justify-content:center;padding:16px;overflow-y:auto}
+    .modal-overlay.open{display:flex}
+    .modal-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;width:100%;max-width:520px;box-shadow:0 16px 64px rgba(0,0,0,.7);overflow:visible;animation:balloonPop .25s cubic-bezier(.34,1.56,.64,1);display:flex;flex-direction:column;max-height:calc(100vh - 32px)}
+    .modal-header{padding:18px 22px 14px;border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:10px;flex-shrink:0}
+    .modal-header-title{font-family:'Orbitron',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:2px;color:var(--white);flex:1}
+    .modal-close{background:none;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer;padding:4px;transition:color .2s}
+    .modal-close:hover{color:var(--white)}
+    .modal-body{padding:20px 22px;display:flex;flex-direction:column;gap:13px;overflow-y:auto;flex:1}
+    .modal-footer{padding:14px 22px 18px;display:flex;gap:10px;justify-content:flex-end;border-top:1px solid var(--border2);flex-shrink:0;background:var(--surface)}
+
+    /* ── TOAST ── */
+    .toast{display:none;position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--cyan) 0%,#0088cc 100%);color:var(--navy);font-family:'Orbitron',sans-serif;font-weight:700;font-size:.62rem;letter-spacing:2px;text-transform:uppercase;padding:12px 26px;border-radius:50px;box-shadow:0 8px 32px rgba(0,200,248,.4);z-index:999;animation:popIn .35s cubic-bezier(.34,1.56,.64,1);white-space:nowrap}
+    @keyframes popIn{from{opacity:0;transform:translateX(-50%) translateY(12px) scale(.9)}to{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}}
+
+    /* ── NAV TABS ACTIVE ── */
+    .nav-tab{cursor:pointer;transition:background .2s,color .2s}
+    .nav-tab:hover{background:var(--surface2);border-color:rgba(0,200,248,.25)}
+    .nav-tab.active{background:var(--surface);border-color:var(--border);color:var(--cyan2);border-bottom-color:var(--surface)}
+    .nav-tab:not(.active){background:var(--surface2);border-color:var(--border2);border-bottom-color:transparent;color:var(--muted)}
+
+    /* ── PAINEL BANCO DE DADOS ── */
+    #panel-db{display:none}
+    #panel-form{display:none}
+
+    .db-tabs{display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap}
+    .db-tab{font-family:'Rajdhani',sans-serif;font-size:.68rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;padding:7px 18px;border-radius:6px;border:1px solid rgba(0,200,248,.15);background:var(--surface2);color:var(--muted);cursor:pointer;transition:all .18s}
+    .db-tab:hover{border-color:var(--cyan);color:var(--white)}
+    .db-tab.active{background:rgba(0,200,248,.12);border-color:var(--cyan);color:var(--cyan2)}
+
+    .db-panel{display:none}
+    .db-panel.active{display:block}
+
+    .db-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+    .db-search{background:var(--surface2);border:1px solid rgba(0,200,248,.12);border-radius:var(--radius);color:var(--white);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 13px;outline:none;transition:border-color .2s;flex:1;min-width:160px;max-width:300px}
+    .db-search:focus{border-color:var(--cyan)}
+    .db-search::placeholder{color:var(--muted);opacity:.5}
+    .db-count{font-family:'Rajdhani',sans-serif;font-size:.62rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+
+    .db-table{width:100%;border-collapse:collapse;font-size:13px}
+    .db-table th{font-family:'Rajdhani',sans-serif;font-size:.6rem;font-weight:600;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted);padding:9px 12px;border-bottom:1px solid var(--border2);text-align:left;white-space:nowrap}
+    .db-table td{padding:10px 12px;border-bottom:1px solid var(--border2);color:var(--text);vertical-align:middle;word-break:break-word}
+    .db-table tr:last-child td{border-bottom:none}
+    .db-table tr:hover td{background:rgba(0,200,248,.03)}
+    .db-table .td-actions{white-space:nowrap;text-align:right}
+    .db-table .td-actions button{background:none;border:1px solid rgba(0,200,248,.15);border-radius:6px;color:var(--muted);font-size:.8rem;cursor:pointer;padding:4px 9px;margin-left:4px;transition:all .18s}
+    .db-table .td-actions button:hover{background:rgba(0,200,248,.08);border-color:var(--cyan);color:var(--cyan)}
+    .db-table .td-actions button.del:hover{background:rgba(224,92,92,.08);border-color:var(--danger);color:var(--danger)}
+    .db-empty{text-align:center;padding:32px 20px;color:var(--muted);font-family:'Rajdhani',sans-serif;font-size:.78rem;letter-spacing:1.5px;text-transform:uppercase}
+
+    .badge-status{display:inline-block;font-family:'Rajdhani',sans-serif;font-size:.58rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;padding:3px 9px;border-radius:4px}
+    .badge-pending{background:rgba(240,165,0,.12);border:1px solid rgba(240,165,0,.3);color:var(--warn)}
+    .badge-partial{background:rgba(0,200,248,.12);border:1px solid rgba(0,200,248,.3);color:var(--cyan)}
+    .badge-done{background:rgba(63,207,142,.12);border:1px solid rgba(63,207,142,.3);color:var(--success)}
+
+    .db-overflow{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+    /* modal genérico reutilizável */
+    #modal-supervisor .modal-box,#modal-service-view .modal-box{max-width:540px}
+
+    /* ── PAINEL DIAGNÓSTICO FIREBASE ── */
+    .diag-fab{position:fixed;bottom:90px;right:24px;z-index:500;background:var(--surface);border:1px solid rgba(0,200,248,.25);border-radius:50px;padding:8px 16px 8px 12px;display:flex;align-items:center;gap:8px;cursor:pointer;box-shadow:0 4px 24px rgba(0,0,0,.5);transition:all .2s;font-family:'Rajdhani',sans-serif;font-size:.68rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+    .diag-fab:hover{border-color:var(--cyan);color:var(--cyan);box-shadow:0 4px 32px rgba(0,200,248,.2)}
+    .diag-dot{width:9px;height:9px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:background .3s}
+    .diag-dot.ok{background:var(--success);box-shadow:0 0 8px var(--success)}
+    .diag-dot.warn{background:var(--warn);box-shadow:0 0 8px var(--warn);animation:diagPulse 1.2s ease-in-out infinite}
+    .diag-dot.err{background:var(--danger);box-shadow:0 0 8px var(--danger);animation:diagPulse .8s ease-in-out infinite}
+    @keyframes diagPulse{0%,100%{opacity:1}50%{opacity:.4}}
+    .diag-panel{position:fixed;bottom:148px;right:24px;width:360px;max-width:calc(100vw - 32px);background:linear-gradient(160deg,#071426 0%,#050d1a 100%);border:1.5px solid rgba(0,200,248,.22);border-radius:14px;box-shadow:0 8px 48px rgba(0,0,0,.7);z-index:499;display:none;flex-direction:column;overflow:hidden;animation:balloonPop .25s cubic-bezier(.34,1.56,.64,1);transform-origin:bottom right}
+    .diag-panel.open{display:flex}
+    .diag-panel-header{background:linear-gradient(90deg,rgba(0,200,248,.1) 0%,rgba(0,200,248,.03) 100%);border-bottom:1px solid rgba(0,200,248,.15);padding:13px 16px;display:flex;align-items:center;gap:10px}
+    .diag-panel-icon{font-size:1rem;line-height:1;flex-shrink:0}
+    .diag-panel-title{font-family:'Orbitron',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:2px;color:var(--cyan);flex:1}
+    .diag-panel-close{background:none;border:none;color:var(--muted);font-size:1rem;cursor:pointer;padding:2px 4px;transition:color .2s}
+    .diag-panel-close:hover{color:var(--white)}
+    .diag-body{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+    .diag-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:9px 11px;background:rgba(0,200,248,.04);border:1px solid rgba(0,200,248,.08);border-radius:8px}
+    .diag-row-label{font-family:'Rajdhani',sans-serif;font-size:.66rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);flex:1}
+    .diag-row-val{font-family:'Orbitron',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:.5px;text-align:right;word-break:break-all;max-width:180px}
+    .diag-val-ok{color:var(--success)}
+    .diag-val-warn{color:var(--warn)}
+    .diag-val-err{color:var(--danger)}
+    .diag-val-info{color:var(--cyan)}
+    .diag-val-muted{color:var(--muted)}
+    .diag-section-title{font-family:'Rajdhani',sans-serif;font-size:.6rem;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:rgba(0,200,248,.35);margin-top:4px;padding:0 2px}
+    .diag-log{background:rgba(0,0,0,.3);border:1px solid rgba(0,200,248,.08);border-radius:8px;padding:9px 11px;max-height:130px;overflow-y:auto;font-family:'Rajdhani',sans-serif;font-size:.63rem;letter-spacing:.5px;color:var(--muted);line-height:1.7;word-break:break-word}
+    .diag-log::-webkit-scrollbar{width:3px}
+    .diag-log::-webkit-scrollbar-thumb{background:rgba(0,200,248,.2);border-radius:2px}
+    .diag-log-entry{display:flex;gap:6px;align-items:flex-start}
+    .diag-log-entry.ok .diag-log-dot{color:var(--success)}
+    .diag-log-entry.err .diag-log-dot{color:var(--danger)}
+    .diag-log-entry.warn .diag-log-dot{color:var(--warn)}
+    .diag-log-entry.info .diag-log-dot{color:var(--cyan)}
+    .diag-log-dot{flex-shrink:0;font-size:.55rem;margin-top:2px}
+    .diag-actions{display:flex;gap:7px;padding:0 16px 14px}
+    .diag-btn{flex:1;background:rgba(0,200,248,.07);border:1px solid rgba(0,200,248,.18);border-radius:7px;color:var(--cyan);font-family:'Orbitron',sans-serif;font-size:.5rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:8px 10px;cursor:pointer;transition:all .2s}
+    .diag-btn:hover{background:rgba(0,200,248,.15);border-color:var(--cyan)}
+    .diag-btn.warn-btn{background:rgba(240,165,0,.07);border-color:rgba(240,165,0,.2);color:var(--warn)}
+    .diag-btn.warn-btn:hover{background:rgba(240,165,0,.15)}
+
+    /* ── FOOTER ── */
+    .site-footer{position:relative;z-index:1;width:100%;border-top:1px solid rgba(0,200,248,.1);background:linear-gradient(180deg,rgba(5,13,26,0) 0%,rgba(5,13,26,.98) 100%);margin-top:auto}
+    .footer-line{width:100%;height:2px;background:linear-gradient(90deg,transparent,rgba(0,200,248,.15) 20%,rgba(0,200,248,.28) 50%,rgba(0,200,248,.15) 80%,transparent)}
+    .site-footer-inner{max-width:1100px;margin:0 auto;padding:22px 32px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
+    .footer-logo{display:flex;align-items:center;gap:12px}
+    .footer-hex{position:relative;width:30px;height:33px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .footer-hex svg{position:absolute;inset:0;width:100%;height:100%;filter:drop-shadow(0 0 4px rgba(0,200,248,.3))}
+    .mono-f{font-family:'Orbitron',sans-serif;font-weight:900;font-size:.62rem;letter-spacing:-1px;color:#fff;position:relative;z-index:2;text-shadow:0 0 10px rgba(0,234,255,.5)}
+    .mono-f span{color:var(--cyan2)}
+    .footer-text{display:flex;flex-direction:column;gap:2px}
+    .footer-name{font-family:'Orbitron',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:2px;color:var(--white);opacity:.7}
+    .footer-name .pj-f{color:var(--cyan2)}
+    .footer-tagline-f{font-family:'Rajdhani',sans-serif;font-size:.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);opacity:.4}
+    .footer-right{font-family:'Rajdhani',sans-serif;font-size:.58rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);opacity:.35;text-align:right}
+    @media(max-width:600px){.footer-right{display:none}.site-footer-inner{padding:16px;justify-content:center}}
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="site-header">
+  <div class="site-header-inner">
+    <a class="logo-inline" href="#">
+      <div class="logo-hex-sm">
+        <svg viewBox="0 0 100 110" fill="none">
+          <defs>
+            <linearGradient id="hHG" x1="0" y1="0" x2="100" y2="110" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#0d3878"/><stop offset="100%" stop-color="#051225"/></linearGradient>
+            <linearGradient id="hHS" x1="0" y1="0" x2="100" y2="110" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#00eaff"/><stop offset="100%" stop-color="#00a0cc"/></linearGradient>
+          </defs>
+          <polygon points="50,4 96,28 96,82 50,106 4,82 4,28" fill="url(#hHG)" stroke="url(#hHS)" stroke-width="3"/>
+          <polygon points="50,12 88,33 88,78 50,98 12,78 12,33" fill="none" stroke="rgba(0,200,248,0.15)" stroke-width="1"/>
+          <circle cx="50" cy="4" r="2" fill="#00eaff" opacity=".8"/>
+          <circle cx="96" cy="28" r="2" fill="#00eaff" opacity=".8"/>
+          <circle cx="96" cy="82" r="2" fill="#00eaff" opacity=".8"/>
+          <circle cx="50" cy="106" r="2" fill="#00eaff" opacity=".8"/>
+          <circle cx="4" cy="82" r="2" fill="#00eaff" opacity=".8"/>
+          <circle cx="4" cy="28" r="2" fill="#00eaff" opacity=".8"/>
+        </svg>
+        <div class="mono-sm">P<span>J</span></div>
+      </div>
+      <div class="logo-text-sm">
+        <div class="logo-name-sm"><span class="pj-sm">PJ</span><span class="sep-sm">·</span>TECNOLOGIA</div>
+        <div class="logo-sub-sm">e &nbsp; Sistemas</div>
+      </div>
+    </a>
+    <div class="header-divider-v"></div>
+    <div class="header-tagline"><strong>Inovação que conecta.</strong><br/>Tecnologia que transforma.</div>
+    <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+      <button class="bell-btn" id="bell-btn" onclick="toggleBalloon()" title="Alertas de serviços">
+        🔔
+        <span class="bell-badge" id="bell-badge">0</span>
+      </button>
+      <div class="header-badge">Novo Serviço</div>
+    </div>
+  </div>
+</header>
+
+<!-- OVERLAY -->
+<div class="alert-overlay" id="alert-overlay" onclick="closeBalloon()"></div>
+
+<!-- BALÃO VERMELHO -->
+<div class="alert-balloon" id="alert-balloon">
+  <div class="balloon-header">
+    <div class="balloon-header-icon">🚨</div>
+    <div class="balloon-header-title">Cobertura Pendente</div>
+    <div class="balloon-header-count" id="balloon-count">0</div>
+    <button class="balloon-close" onclick="closeBalloon()">✕</button>
+  </div>
+  <div class="balloon-body" id="balloon-body"></div>
+  <div class="balloon-footer">Serviços aguardando cobertura de vagas</div>
+</div>
+
+<!-- TABS -->
+<div class="nav-tabs">
+  <div class="nav-tab active" id="tab-form" onclick="switchTab('form')">＋ Novo Serviço</div>
+  <div class="nav-tab" id="tab-db" onclick="switchTab('db')">🗄 Banco de Dados</div>
+</div>
+
+<div class="main-wrap">
+
+  <div id="panel-form" class="active">
+  <form class="card" id="service-form" novalidate autocomplete="off">
+
+    <!-- 1. CLIENTE -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">1</div>
+        <h2 class="section-title">Cliente</h2>
+      </div>
+      <div class="grid-2">
+        <div class="field">
+          <label>Nome do cliente <span class="req">*</span></label>
+          <div class="ac-wrap">
+            <input type="text" id="client-name" placeholder="Digite para buscar ou cadastrar…" required autocomplete="new-password"
+              oninput="acInput(this)" onkeydown="acKeydown(event)" onblur="acBlur()"/>
+            <div class="ac-dropdown" id="ac-dropdown"></div>
+          </div>
+          <span class="field-error" id="err-client">Campo obrigatório</span>
+        </div>
+        <div class="field">
+          <label>CNPJ / CPF</label>
+          <input type="text" id="client-doc" placeholder="00.000.000/0001-00" autocomplete="new-password"/>
+        </div>
+      </div>
+      <div class="grid-2" style="margin-top:13px">
+        <div class="field">
+          <label>Contato responsável</label>
+          <input type="text" id="client-contact" placeholder="Nome do contato" autocomplete="new-password"/>
+        </div>
+        <div class="field">
+          <label>Telefone / E-mail</label>
+          <input type="text" id="client-phone" placeholder="(00) 00000-0000" oninput="maskPhone(this)" maxlength="15" autocomplete="new-password"/>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. SERVIÇO -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">2</div>
+        <h2 class="section-title">Serviço Solicitado</h2>
+      </div>
+      <div class="grid-2">
+        <div class="field">
+          <label>Tipo de serviço <span class="req">*</span></label>
+          <input type="text" id="service-name" placeholder="Ex.: Instalação, Manutenção, Consultoria…" required autocomplete="new-password"/>
+          <span class="field-error" id="err-service">Campo obrigatório</span>
+        </div>
+        <div class="field">
+          <label>Local de execução <span class="req">*</span></label>
+          <input type="text" id="service-location" placeholder="Endereço completo" required autocomplete="new-password"/>
+          <span class="field-error" id="err-location">Campo obrigatório</span>
+        </div>
+      </div>
+      <div class="field" style="margin-top:13px">
+        <label>Descrição / Escopo do trabalho</label>
+        <textarea id="service-desc" placeholder="Detalhes do que será realizado…"></textarea>
+      </div>
+    </div>
+
+    <!-- 3. DATA E HORÁRIOS -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">3</div>
+        <h2 class="section-title">Data, Período e Horários</h2>
+      </div>
+      <div class="grid-4">
+        <div class="field">
+          <label>Data de início <span class="req">*</span></label>
+          <input type="date" id="date-start" required/>
+          <span class="field-error" id="err-date-start">Obrigatório</span>
+        </div>
+        <div class="field">
+          <label>Data de término <span class="req">*</span></label>
+          <input type="date" id="date-end" required/>
+          <span class="field-error" id="err-date-end">Obrigatório</span>
+        </div>
+        <div class="field">
+          <label>Horário início <span class="req">*</span></label>
+          <input type="time" id="time-start" required/>
+          <span class="field-error" id="err-time-start">Obrigatório</span>
+        </div>
+        <div class="field">
+          <label>Horário término <span class="req">*</span></label>
+          <input type="time" id="time-end" required/>
+          <span class="field-error" id="err-time-end">Obrigatório</span>
+        </div>
+      </div>
+      <div style="margin-top:14px">
+        <div class="toggle-wrap" id="toggle-multi" onclick="toggleMultiDay()">
+          <div class="toggle" id="toggle-icon"></div>
+          <div>
+            <div class="toggle-label">Horários diferentes em dias específicos</div>
+            <div class="toggle-sub">Ative para personalizar turnos por dia do serviço</div>
+          </div>
+        </div>
+        <div id="special-schedules" style="display:none">
+          <div id="day-list"></div>
+          <button type="button" class="add-day-btn" onclick="addDaySchedule()"><span>＋</span> Adicionar dia com horário diferente</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. EQUIPE E REMUNERAÇÃO -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">4</div>
+        <h2 class="section-title">Equipe e Remuneração</h2>
+      </div>
+      <div class="grid-3">
+        <div class="field">
+          <label>Vagas (nº de colaboradores) <span class="req">*</span></label>
+          <div class="vagas-wrap">
+            <button type="button" onclick="changeVagas(-1)">−</button>
+            <input type="number" id="vagas" value="1" min="1" max="99"/>
+            <button type="button" onclick="changeVagas(1)">+</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Valor pago ao colaborador <span class="req">*</span></label>
+          <div class="currency-wrap">
+            <span class="pre">R$</span>
+            <input type="number" id="pay-collab" placeholder="0,00" min="0" step="0.01" required autocomplete="new-password"/>
+          </div>
+          <span class="field-error" id="err-pay-collab">Informe o valor</span>
+        </div>
+        <div class="field">
+          <label>Tipo de remuneração</label>
+          <select id="pay-collab-type">
+            <option value="">Selecione…</option>
+            <option>Por diária</option>
+            <option>Por hora</option>
+            <option>Por evento</option>
+            <option>Valor fixo total</option>
+          </select>
+        </div>
+      </div>
+      <div class="field" style="margin-top:13px">
+        <label>Observações para o colaborador</label>
+        <input type="text" id="pay-obs" placeholder="Ex.: Levar EPI, uniforme obrigatório, ponto de encontro…" autocomplete="new-password"/>
+      </div>
+    </div>
+
+    <!-- 5. FINANCEIRO CLIENTE -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">5</div>
+        <h2 class="section-title">Financeiro — Cliente</h2>
+      </div>
+      <div class="grid-3">
+        <div class="field">
+          <label>Valor cobrado do cliente <span class="req">*</span></label>
+          <div class="currency-wrap">
+            <span class="pre">R$</span>
+            <input type="number" id="payment-value" placeholder="0,00" min="0" step="0.01" required autocomplete="new-password"/>
+          </div>
+          <span class="field-error" id="err-payment">Informe o valor</span>
+        </div>
+        <div class="field">
+          <label>Forma de cobrança</label>
+          <select id="payment-type">
+            <option value="">Selecione…</option>
+            <option>Valor fixo</option>
+            <option>Por hora</option>
+            <option>Por dia</option>
+            <option>Por evento</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Forma de pagamento</label>
+          <select id="payment-method-sel">
+            <option value="">Selecione…</option>
+            <option>PIX</option>
+            <option>Boleto</option>
+            <option>Transferência</option>
+            <option>Cartão</option>
+            <option>Dinheiro</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:14px">
+        <label style="display:block;margin-bottom:9px">Condição de pagamento</label>
+        <div class="pill-group" id="payment-cond">
+          <div class="pill" onclick="selectPill(this,'cond')">À vista</div>
+          <div class="pill" onclick="selectPill(this,'cond')">50% antecipado</div>
+          <div class="pill" onclick="selectPill(this,'cond')">Parcelado</div>
+          <div class="pill" onclick="selectPill(this,'cond')">Pós-serviço</div>
+          <div class="pill" onclick="selectPill(this,'cond')">Mensal</div>
+        </div>
+      </div>
+      <div class="field" style="margin-top:13px">
+        <label>Observação financeira</label>
+        <input type="text" id="payment-obs" placeholder="Ex.: NF solicitada, desconto aplicado…" autocomplete="new-password"/>
+      </div>
+    </div>
+
+    <!-- SUBMIT -->
+    <div class="submit-section">
+      <div class="submit-summary" id="submit-summary">Preencha os campos obrigatórios para lançar o serviço.</div>
+      <button type="submit" class="btn-primary">Lançar Serviço →</button>
+    </div>
+
+  </form>
+  </div><!-- /panel-form -->
+
+  <!-- PAINEL BANCO DE DADOS -->
+  <div id="panel-db">
+    <div class="card" style="border-radius:12px">
+      <div class="section">
+        <div class="db-tabs">
+          <div class="db-tab active" id="dbtab-clients" onclick="switchDbTab('clients')">👥 Clientes</div>
+          <div class="db-tab" id="dbtab-supervisors" onclick="switchDbTab('supervisors')">🎖 Supervisores</div>
+          <div class="db-tab" id="dbtab-services" onclick="switchDbTab('services')">📋 Serviços Lançados</div>
+        </div>
+
+        <!-- CLIENTES -->
+        <div class="db-panel active" id="dbpanel-clients">
+          <div class="db-toolbar">
+            <input class="db-search" id="db-search-clients" placeholder="Buscar cliente…" oninput="renderClients()"/>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span class="db-count" id="db-count-clients"></span>
+              <button type="button" class="btn-primary" style="font-size:.58rem;padding:8px 16px" onclick="openClientModal()">+ Novo</button>
+            </div>
+          </div>
+          <div class="db-overflow">
+            <table class="db-table" id="db-table-clients">
+              <thead><tr>
+                <th>Nome / Razão social</th>
+                <th>CNPJ / CPF</th>
+                <th>Contato</th>
+                <th>Telefone</th>
+                <th></th>
+              </tr></thead>
+              <tbody id="db-body-clients"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SUPERVISORES -->
+        <div class="db-panel" id="dbpanel-supervisors">
+          <div class="db-toolbar">
+            <input class="db-search" id="db-search-supervisors" placeholder="Buscar supervisor…" oninput="renderSupervisors()"/>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span class="db-count" id="db-count-supervisors"></span>
+              <button type="button" class="btn-primary" style="font-size:.58rem;padding:8px 16px" onclick="openSupervisorModal()">+ Novo</button>
+            </div>
+          </div>
+          <div class="db-overflow">
+            <table class="db-table">
+              <thead><tr>
+                <th>Nome</th>
+                <th>CPF</th>
+                <th>Telefone</th>
+                <th>E-mail</th>
+                <th>Cargo</th>
+                <th></th>
+              </tr></thead>
+              <tbody id="db-body-supervisors"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SERVIÇOS LANÇADOS -->
+        <div class="db-panel" id="dbpanel-services">
+          <div class="db-toolbar">
+            <input class="db-search" id="db-search-services" placeholder="Buscar serviço…" oninput="renderServices()"/>
+            <span class="db-count" id="db-count-services"></span>
+          </div>
+          <div class="db-overflow">
+            <table class="db-table">
+              <thead><tr>
+                <th>Cliente</th>
+                <th>Serviço</th>
+                <th>Local</th>
+                <th>Início</th>
+                <th>Vagas</th>
+                <th>Valor cliente</th>
+                <th>Status</th>
+                <th></th>
+              </tr></thead>
+              <tbody id="db-body-services"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div><!-- /panel-db -->
+
+</div><!-- /main-wrap -->
+
+<!-- MODAL NOVO CLIENTE (via autocomplete) -->
+<div class="modal-overlay" id="modal-cliente">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-header-title" id="modal-title">Novo Cliente</div>
+      <button type="button" class="modal-close" onclick="closeClientModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="grid-2">
+        <div class="field">
+          <label>Nome / Razão social <span class="req">*</span></label>
+          <input type="text" id="mc-name" placeholder="Empresa ou pessoa física" autocomplete="new-password"/>
+          <span class="field-error" id="mc-err-name">Campo obrigatório</span>
+        </div>
+        <div class="field">
+          <label>CNPJ / CPF</label>
+          <input type="text" id="mc-doc" placeholder="00.000.000/0001-00" autocomplete="new-password"/>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="field">
+          <label>Contato responsável</label>
+          <input type="text" id="mc-contact" placeholder="Nome do contato" autocomplete="new-password"/>
+        </div>
+        <div class="field">
+          <label>Telefone / E-mail</label>
+          <input type="text" id="mc-phone" placeholder="(00) 00000-0000" oninput="maskPhone(this)" maxlength="15" autocomplete="new-password"/>
+        </div>
+      </div>
+      <div class="field">
+        <label>Observações</label>
+        <textarea id="mc-obs" placeholder="Informações adicionais…" style="min-height:56px"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-ghost" onclick="closeClientModal()">Cancelar</button>
+      <button type="button" class="btn-primary" style="font-size:.62rem;padding:10px 22px" onclick="saveClient()">Salvar Cliente</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL SUPERVISOR -->
+<div class="modal-overlay" id="modal-supervisor">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-header-title" id="modal-sup-title">Novo Supervisor</div>
+      <button type="button" class="modal-close" onclick="closeSupervisorModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="grid-2">
+        <div class="field">
+          <label>Nome completo <span class="req">*</span></label>
+          <input type="text" id="ms-name" placeholder="Nome do supervisor" autocomplete="new-password"/>
+          <span class="field-error" id="ms-err-name">Campo obrigatório</span>
+        </div>
+        <div class="field">
+          <label>CPF</label>
+          <input type="text" id="ms-cpf" placeholder="000.000.000-00" autocomplete="new-password"/>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="field">
+          <label>Telefone</label>
+          <input type="text" id="ms-phone" placeholder="(00) 00000-0000" oninput="maskPhone(this)" maxlength="15" autocomplete="new-password"/>
+        </div>
+        <div class="field">
+          <label>E-mail</label>
+          <input type="email" id="ms-email" placeholder="supervisor@email.com" autocomplete="new-password"/>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="field">
+          <label>Cargo</label>
+          <select id="ms-role">
+            <option value="">Selecione…</option>
+            <option>Supervisor</option>
+            <option>Supervisor Sênior</option>
+            <option>Coordenador</option>
+            <option>Gerente Operacional</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Matrícula</label>
+          <input type="text" id="ms-mat" placeholder="Ex.: SUP-001" autocomplete="new-password"/>
+        </div>
+      </div>
+      <div class="field">
+        <label>Observações</label>
+        <textarea id="ms-obs" placeholder="Informações adicionais…" style="min-height:56px"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-ghost" onclick="closeSupervisorModal()">Cancelar</button>
+      <button type="button" class="btn-primary" style="font-size:.62rem;padding:10px 22px" onclick="saveSupervisor()">Salvar Supervisor</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL VISUALIZAR SERVIÇO -->
+<div class="modal-overlay" id="modal-service-view">
+  <div class="modal-box" style="max-width:600px">
+    <div class="modal-header">
+      <div class="modal-header-title">Detalhes do Serviço</div>
+      <button type="button" class="modal-close" onclick="closeServiceModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-service-body"></div>
+    <div class="modal-footer">
+      <button type="button" class="btn-ghost" onclick="closeServiceModal()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- DIAGNÓSTICO FIREBASE FAB -->
+<button class="diag-fab" id="diag-fab" onclick="toggleDiag()" title="Diagnóstico Firebase">
+  <div class="diag-dot" id="diag-dot"></div>
+  <span id="diag-fab-label">Firebase</span>
+</button>
+
+<!-- PAINEL DIAGNÓSTICO -->
+<div class="diag-panel" id="diag-panel">
+  <div class="diag-panel-header">
+    <div class="diag-panel-icon">🔬</div>
+    <div class="diag-panel-title">Diagnóstico Firebase</div>
+    <button class="diag-panel-close" onclick="toggleDiag()">✕</button>
+  </div>
+  <div class="diag-body">
+    <div class="diag-section-title">Conexão</div>
+    <div class="diag-row">
+      <div class="diag-row-label">Status SDK</div>
+      <div class="diag-row-val" id="diag-sdk">—</div>
+    </div>
+    <div class="diag-row">
+      <div class="diag-row-label">Firestore</div>
+      <div class="diag-row-val" id="diag-firestore">—</div>
+    </div>
+    <div class="diag-row">
+      <div class="diag-row-label">Projeto</div>
+      <div class="diag-row-val diag-val-info" id="diag-project">—</div>
+    </div>
+    <div class="diag-row">
+      <div class="diag-row-label">Modo de dados</div>
+      <div class="diag-row-val" id="diag-mode">—</div>
+    </div>
+    <div class="diag-section-title" style="margin-top:6px">Coleções</div>
+    <div class="diag-row">
+      <div class="diag-row-label">Serviços (Firestore)</div>
+      <div class="diag-row-val" id="diag-col-services">—</div>
+    </div>
+    <div class="diag-row">
+      <div class="diag-row-label">Clientes (Firestore)</div>
+      <div class="diag-row-val" id="diag-col-clients">—</div>
+    </div>
+    <div class="diag-row">
+      <div class="diag-row-label">Supervisores (Firestore)</div>
+      <div class="diag-row-val" id="diag-col-supervisors">—</div>
+    </div>
+    <div class="diag-section-title" style="margin-top:6px">Log</div>
+    <div class="diag-log" id="diag-log"></div>
+  </div>
+  <div class="diag-actions">
+    <button class="diag-btn" onclick="diagTestWrite()">Testar Escrita</button>
+    <button class="diag-btn" onclick="diagRefresh()">Atualizar</button>
+    <button class="diag-btn warn-btn" onclick="diagSyncToFirestore()">Sync LS→FB</button>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="site-footer">
+  <div class="footer-line"></div>
+  <div class="site-footer-inner">
+    <div class="footer-logo">
+      <div class="footer-hex">
+        <svg viewBox="0 0 100 110" fill="none">
+          <defs>
+            <linearGradient id="fHG" x1="0" y1="0" x2="100" y2="110" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#0d3878"/><stop offset="100%" stop-color="#051225"/></linearGradient>
+            <linearGradient id="fHS" x1="0" y1="0" x2="100" y2="110" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#00eaff"/><stop offset="100%" stop-color="#00a0cc"/></linearGradient>
+          </defs>
+          <polygon points="50,4 96,28 96,82 50,106 4,82 4,28" fill="url(#fHG)" stroke="url(#fHS)" stroke-width="3"/>
+          <circle cx="50" cy="4" r="2" fill="#00eaff" opacity=".7"/>
+          <circle cx="96" cy="28" r="2" fill="#00eaff" opacity=".7"/>
+          <circle cx="96" cy="82" r="2" fill="#00eaff" opacity=".7"/>
+          <circle cx="50" cy="106" r="2" fill="#00eaff" opacity=".7"/>
+          <circle cx="4" cy="82" r="2" fill="#00eaff" opacity=".7"/>
+          <circle cx="4" cy="28" r="2" fill="#00eaff" opacity=".7"/>
+        </svg>
+        <div class="mono-f">P<span>J</span></div>
+      </div>
+      <div class="footer-text">
+        <div class="footer-name"><span class="pj-f">PJ</span> · TECNOLOGIA E SISTEMAS</div>
+        <div class="footer-tagline-f">Inovação que conecta.</div>
+      </div>
+    </div>
+    <div class="footer-right">© 2025 PJ Tecnologia e Sistemas<br/>Gestão de Serviços v2.0</div>
+  </div>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════
+// FIREBASE CONFIG + INIT
+// ══════════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyDojh97p_R6lkggmO95KcNpCSWhx2po1uw",
+  authDomain: "novo-servico.firebaseapp.com",
+  projectId: "novo-servico",
+  storageBucket: "novo-servico.firebasestorage.app",
+  messagingSenderId: "845478678895",
+  appId: "1:845478678895:web:7b5ec57ea5bbce8d78d89a"
+};
+
+let db = null;
+let fbReady = false;
+let fbError = null;
+
+try {
+  if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+  db = firebase.firestore();
+  fbReady = true;
+  diagLog('info', 'Firebase inicializado com sucesso');
+} catch(e) {
+  fbError = e.message;
+  diagLog('err', 'Erro ao inicializar Firebase: ' + e.message);
+}
+
+// Utilitários Firebase
+async function fbSave(col, id, data){
+  if(!fbReady || !db) return false;
+  try {
+    await db.collection(col).doc(String(id)).set(data);
+    return true;
+  } catch(e) {
+    diagLog('err', 'fbSave ['+col+']: '+e.message);
+    return false;
+  }
+}
+async function fbDelete(col, id){
+  if(!fbReady || !db) return false;
+  try {
+    await db.collection(col).doc(String(id)).delete();
+    return true;
+  } catch(e) {
+    diagLog('err', 'fbDelete ['+col+']: '+e.message);
+    return false;
+  }
+}
+async function fbLoadAll(col){
+  if(!fbReady || !db) return null;
+  try {
+    const snap = await db.collection(col).get();
+    return snap.docs.map(d => d.data());
+  } catch(e) {
+    diagLog('err', 'fbLoadAll ['+col+']: '+e.message);
+    return null;
+  }
+}
+
+// ══════════════════════════════════════════
+// DADOS — localStorage + Firestore
+// ══════════════════════════════════════════
+let services    = JSON.parse(localStorage.getItem('pj_services')   ||'[]');
+let clients     = JSON.parse(localStorage.getItem('pj_clients')    ||'[]');
+let supervisors = JSON.parse(localStorage.getItem('pj_supervisors')||'[]');
+let multiDay = false, dayCount = 0, acIndex = -1;
+let editingClientId = null;
+
+function save(){
+  localStorage.setItem('pj_services',    JSON.stringify(services));
+  localStorage.setItem('pj_clients',     JSON.stringify(clients));
+  localStorage.setItem('pj_supervisors', JSON.stringify(supervisors));
+}
+// Salva um item individual no Firestore também
+async function saveToFb(col, item){
+  const ok = await fbSave(col, item.id, item);
+  if(ok) diagLog('ok', 'Salvo no Firestore: '+col+' #'+item.id);
+  else   diagLog('warn', 'Salvo só no localStorage ('+col+')');
+}
+async function deleteFromFb(col, id){
+  const ok = await fbDelete(col, id);
+  if(ok) diagLog('ok', 'Removido do Firestore: '+col+' #'+id);
+}
+
+// ══════════════════════════════════════════
+// SINO — alertas
+// ══════════════════════════════════════════
+function updateAlerts(){
+  const n = services.filter(s => (s.coberturas||0) === 0 && s.status === 'pending').length;
+  const badge   = document.getElementById('bell-badge');
+  const bellBtn = document.getElementById('bell-btn');
+  if(n > 0){
+    badge.textContent = n;
+    badge.style.display = 'flex';
+    bellBtn.classList.add('has-alerts');
+  } else {
+    badge.style.display = 'none';
+    bellBtn.classList.remove('has-alerts');
+  }
+}
+
+function toggleBalloon(){
+  const bal = document.getElementById('alert-balloon');
+  if(bal.classList.contains('open')){ closeBalloon(); return; }
+  const urgent = services.filter(s => (s.coberturas||0) === 0 && s.status === 'pending');
+  if(!urgent.length){ showToast('Nenhum serviço sem cobertura! ✓'); return; }
+  document.getElementById('balloon-count').textContent = urgent.length;
+  renderBalloon(urgent);
+  bal.classList.add('open');
+  document.getElementById('alert-overlay').classList.add('open');
+}
+
+function closeBalloon(){
+  document.getElementById('alert-balloon').classList.remove('open');
+  document.getElementById('alert-overlay').classList.remove('open');
+}
+
+function renderBalloon(list){
+  const fmt = d => d ? new Date(d+'T00:00:00').toLocaleDateString('pt-BR') : '—';
+  document.getElementById('balloon-body').innerHTML = list.map(svc => `
+    <div class="balert-item" id="balert-${svc.id}">
+      <div class="balert-client">${svc.client}</div>
+      <div class="balert-detail">${svc.service} · ${fmt(svc.dateStart)} · ${svc.timeStart}–${svc.timeEnd}</div>
+      <div class="balert-tags">
+        <span class="balert-tag">📍 ${svc.location||'—'}</span>
+        <span class="balert-tag">👥 ${svc.vagas} vaga(s)</span>
+        <span class="balert-tag">💰 R$ ${svc.payCollab.toLocaleString('pt-BR',{minimumFractionDigits:2})} / colab</span>
+      </div>
+      <div class="balert-actions">
+        <button class="btn-balert-cover" onclick="quickCover(${svc.id})">✓ Confirmar 1ª vaga</button>
+      </div>
+    </div>`).join('');
+}
+
+function quickCover(id){
+  const svc = services.find(s => s.id === id);
+  if(!svc || (svc.coberturas||0) >= svc.vagas) return;
+  svc.coberturas = (svc.coberturas||0) + 1;
+  svc.status = svc.coberturas >= svc.vagas ? 'done' : 'partial';
+  save(); updateAlerts();
+  showToast('✓ 1ª vaga de '+svc.client+' confirmada!');
+  const el = document.getElementById('balert-'+id);
+  if(el){
+    el.style.transition = 'opacity .25s,transform .25s';
+    el.style.opacity = '0'; el.style.transform = 'translateX(20px)';
+    setTimeout(()=>{
+      const rem = services.filter(s => (s.coberturas||0) === 0 && s.status === 'pending');
+      rem.length ? renderBalloon(rem) : closeBalloon();
+      document.getElementById('balloon-count').textContent = rem.length;
+    }, 280);
+  }
+}
+
+// ══════════════════════════════════════════
+// AUTOCOMPLETE CLIENTE
+// ══════════════════════════════════════════
+function acInput(inp){
+  const q = inp.value.trim().toLowerCase();
+  const dd = document.getElementById('ac-dropdown');
+  if(!q){ dd.classList.remove('open'); dd.innerHTML=''; return; }
+  const matches = clients.filter(c => c.name.toLowerCase().includes(q));
+  const exact   = clients.some(c => c.name.toLowerCase() === q);
+  acIndex = -1;
+  let html = matches.map((c,i) => `
+    <div class="ac-item" data-idx="${i}" onmousedown="acSelect(${c.id})">
+      <div class="ac-item-name">${c.name}</div>
+      ${c.doc ? `<div class="ac-item-doc">${c.doc}</div>` : ''}
+    </div>`).join('');
+  if(!exact) html += `<div class="ac-item-new" onmousedown="acCreateNew('${inp.value.trim().replace(/'/g,"\\'")}')">
+    <span>NOVO</span> Cadastrar "${inp.value.trim()}"</div>`;
+  dd.innerHTML = html;
+  dd.classList.add('open');
+  updateSummary();
+}
+
+function acSelect(clientId){
+  const c = clients.find(x => x.id === clientId); if(!c) return;
+  document.getElementById('client-name').value    = c.name;
+  document.getElementById('client-doc').value     = c.doc||'';
+  document.getElementById('client-contact').value = c.contact||'';
+  document.getElementById('client-phone').value   = c.phone||'';
+  closeAc(); updateSummary();
+}
+
+function acCreateNew(name){ closeAc(); openClientModal(name); }
+function acBlur(){ setTimeout(closeAc, 180); }
+function closeAc(){
+  document.getElementById('ac-dropdown').classList.remove('open');
+  acIndex = -1;
+}
+function acKeydown(e){
+  const dd    = document.getElementById('ac-dropdown');
+  const items = dd.querySelectorAll('.ac-item');
+  if(!dd.classList.contains('open')) return;
+  if(e.key==='ArrowDown'){ e.preventDefault(); acIndex=Math.min(acIndex+1,items.length-1); }
+  else if(e.key==='ArrowUp'){ e.preventDefault(); acIndex=Math.max(acIndex-1,0); }
+  else if(e.key==='Enter'&&acIndex>=0){ e.preventDefault(); items[acIndex]?.dispatchEvent(new MouseEvent('mousedown')); return; }
+  else if(e.key==='Escape'){ closeAc(); return; }
+  items.forEach((el,i) => el.classList.toggle('active', i===acIndex));
+}
+
+// ══════════════════════════════════════════
+// MODAL CLIENTE
+// ══════════════════════════════════════════
+function _clearClientModal(){
+  ['mc-name','mc-doc','mc-contact','mc-phone'].forEach(id => {
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.value = '';
+    el.defaultValue = '';
+    el.removeAttribute('value');
+  });
+  const obs = document.getElementById('mc-obs');
+  if(obs){ obs.value = ''; obs.textContent = ''; }
+  document.getElementById('mc-name')?.classList.remove('invalid');
+  const err = document.getElementById('mc-err-name');
+  if(err) err.style.display = 'none';
+}
+
+function openClientModal(prefill){
+  editingClientId = null;
+  _clearClientModal();
+  document.getElementById('modal-title').textContent = 'Novo Cliente';
+  document.getElementById('modal-cliente').classList.add('open');
+  setTimeout(()=>{
+    _clearClientModal();   // segunda passagem: bloqueia autocomplete do browser
+    if(prefill) document.getElementById('mc-name').value = prefill;
+    document.getElementById('mc-name')?.focus();
+  }, 50);
+}
+
+function closeClientModal(){
+  document.getElementById('modal-cliente').classList.remove('open');
+  editingClientId = null;
+  _clearClientModal();
+  setTimeout(_clearClientModal, 200); // limpa após animação de fechamento
+}
+
+function saveClient(){
+  const nameEl = document.getElementById('mc-name');
+  const name   = (nameEl?.value||'').trim();
+  if(!name){
+    nameEl?.classList.add('invalid');
+    document.getElementById('mc-err-name').style.display = 'block';
+    return;
+  }
+  if(editingClientId){
+    const c = clients.find(x => x.id === editingClientId);
+    if(c){
+      c.name    = name;
+      c.doc     = (document.getElementById('mc-doc')?.value||'').trim();
+      c.contact = (document.getElementById('mc-contact')?.value||'').trim();
+      c.phone   = (document.getElementById('mc-phone')?.value||'').trim();
+      c.obs     = (document.getElementById('mc-obs')?.value||'').trim();
+      save(); renderClients(); closeClientModal();
+      showToast('✓ Cliente "'+name+'" atualizado!');
+      saveToFb('clientes', c);
+      return;
+    }
+  }
+  const c = {
+    id:      Date.now(),
+    name,
+    doc:     (document.getElementById('mc-doc')?.value||'').trim(),
+    contact: (document.getElementById('mc-contact')?.value||'').trim(),
+    phone:   (document.getElementById('mc-phone')?.value||'').trim(),
+    obs:     (document.getElementById('mc-obs')?.value||'').trim(),
+  };
+  clients.unshift(c);
+  save(); saveToFb('clientes', c);
+  document.getElementById('client-name').value    = c.name;
+  document.getElementById('client-doc').value     = c.doc;
+  document.getElementById('client-contact').value = c.contact;
+  document.getElementById('client-phone').value   = c.phone;
+  updateSummary();
+  closeClientModal();
+  renderClients();
+  showToast('✓ Cliente "'+name+'" cadastrado!');
+}
+
+// ══════════════════════════════════════════
+// MÁSCARA TELEFONE
+// ══════════════════════════════════════════
+function maskPhone(el){
+  let v = el.value.replace(/\D/g,'').slice(0,11);
+  if(v.length <= 10){
+    v = v.replace(/^(\d{0,2})(\d{0,4})(\d{0,4})$/,(_,a,b,c)=>{
+      if(c) return `(${a}) ${b}-${c}`;
+      if(b) return `(${a}) ${b}`;
+      if(a) return `(${a}`; return '';
+    });
+  } else {
+    v = v.replace(/^(\d{2})(\d{5})(\d{4})$/,'($1) $2-$3');
+  }
+  el.value = v;
+}
+
+// ══════════════════════════════════════════
+// VAGAS / MULTI-DAY / PILLS
+// ══════════════════════════════════════════
+function changeVagas(d){
+  const inp = document.getElementById('vagas');
+  inp.value = Math.max(1, Math.min(99, (parseInt(inp.value)||1) + d));
+}
+
+function toggleMultiDay(){
+  multiDay = !multiDay;
+  document.getElementById('toggle-icon').classList.toggle('active', multiDay);
+  document.getElementById('special-schedules').style.display = multiDay ? 'block' : 'none';
+}
+
+function addDaySchedule(){
+  dayCount++;
+  const div = document.createElement('div');
+  div.className = 'day-schedule';
+  div.id = 'day-'+dayCount;
+  div.innerHTML = `
+    <div class="day-schedule-header">
+      <span>Dia específico #${dayCount}</span>
+      <button type="button" class="remove-day" onclick="removeDay(${dayCount})">×</button>
+    </div>
+    <div class="grid-3">
+      <div class="field"><label>Data</label><input type="date" id="ds-date-${dayCount}"/></div>
+      <div class="field"><label>Início</label><input type="time" id="ds-start-${dayCount}"/></div>
+      <div class="field"><label>Término</label><input type="time" id="ds-end-${dayCount}"/></div>
+    </div>
+    <div class="field" style="margin-top:9px">
+      <label>Obs. do dia</label>
+      <input type="text" id="ds-obs-${dayCount}" placeholder="Ex.: Turno diferente…"/>
+    </div>`;
+  document.getElementById('day-list').appendChild(div);
+}
+
+function removeDay(id){ document.getElementById('day-'+id)?.remove(); }
+
+function selectPill(el, group){
+  document.querySelectorAll('#payment-cond .pill').forEach(p => p.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+// ══════════════════════════════════════════
+// RESUMO
+// ══════════════════════════════════════════
+function updateSummary(){
+  const client = document.getElementById('client-name').value.trim();
+  const ds     = document.getElementById('date-start').value;
+  const de     = document.getElementById('date-end').value;
+  const val    = document.getElementById('payment-value').value;
+  const pag    = document.getElementById('pay-collab').value;
+  const vagas  = document.getElementById('vagas').value;
+  const el     = document.getElementById('submit-summary');
+  if(client && ds){
+    const fmt = d => d ? new Date(d+'T00:00:00').toLocaleDateString('pt-BR') : '—';
+    el.innerHTML = `<strong>${client}</strong> &nbsp;·&nbsp; ${fmt(ds)} → ${fmt(de)}<br/>
+      Cliente: ${val?'R$ '+parseFloat(val).toLocaleString('pt-BR',{minimumFractionDigits:2}):'—'} &nbsp;·&nbsp;
+      Colaborador: ${pag?'R$ '+parseFloat(pag).toLocaleString('pt-BR',{minimumFractionDigits:2}):'—'} &nbsp;·&nbsp; ${vagas} vaga(s)`;
+  } else {
+    el.innerHTML = 'Preencha os campos obrigatórios para lançar o serviço.';
+  }
+}
+['client-name','date-start','date-end','payment-value','pay-collab','vagas'].forEach(id => {
+  document.getElementById(id)?.addEventListener('input', updateSummary);
+});
+
+// ══════════════════════════════════════════
+// RESET FORMULÁRIO
+// ══════════════════════════════════════════
+function _forceEmpty(id){
+  const el = document.getElementById(id); if(!el) return;
+  el.value = '';
+  el.defaultValue = '';
+  el.removeAttribute('value');
+  if(el.tagName === 'TEXTAREA') el.textContent = '';
+  el.dispatchEvent(new Event('input',{bubbles:true}));
+}
+function _forceSelect(id){
+  const el = document.getElementById(id); if(!el) return;
+  el.selectedIndex = 0;
+}
+
+function resetForm(){
+  ['client-name','client-doc','client-contact','client-phone',
+   'service-name','service-location','service-desc',
+   'date-start','date-end','time-start','time-end',
+   'pay-collab','pay-obs','payment-value','payment-obs'
+  ].forEach(_forceEmpty);
+  ['pay-collab-type','payment-type','payment-method-sel'].forEach(_forceSelect);
+
+  const vagasEl = document.getElementById('vagas');
+  if(vagasEl){ vagasEl.value = 1; vagasEl.defaultValue = 1; }
+
+  document.getElementById('submit-summary').innerHTML = 'Preencha os campos obrigatórios para lançar o serviço.';
+  document.querySelectorAll('.pill').forEach(p => p.classList.remove('selected'));
+  document.querySelectorAll('.invalid').forEach(el => el.classList.remove('invalid'));
+  document.querySelectorAll('.field-error').forEach(el => { el.style.display='none'; el.textContent='Campo obrigatório'; });
+
+  multiDay = false;
+  document.getElementById('toggle-icon').classList.remove('active');
+  document.getElementById('special-schedules').style.display = 'none';
+  document.getElementById('day-list').innerHTML = '';
+  closeAc();
+
+  // segunda passagem após render do browser
+  requestAnimationFrame(()=>{
+    ['client-name','client-doc','client-contact','client-phone',
+     'service-name','service-location','service-desc',
+     'date-start','date-end','time-start','time-end',
+     'pay-collab','pay-obs','payment-value','payment-obs'
+    ].forEach(_forceEmpty);
+  });
+}
+
+// ══════════════════════════════════════════
+// VALIDAÇÃO + SUBMIT
+// ══════════════════════════════════════════
+function validate(){
+  let ok = true;
+  const req = [
+    {id:'client-name',    err:'err-client'},
+    {id:'service-name',   err:'err-service'},
+    {id:'service-location',err:'err-location'},
+    {id:'date-start',     err:'err-date-start'},
+    {id:'date-end',       err:'err-date-end'},
+    {id:'time-start',     err:'err-time-start'},
+    {id:'time-end',       err:'err-time-end'},
+    {id:'pay-collab',     err:'err-pay-collab'},
+    {id:'payment-value',  err:'err-payment'},
+  ];
+  req.forEach(({id,err})=>{
+    const el = document.getElementById(id);
+    const errEl = document.getElementById(err);
+    if(!el?.value.trim()){ el?.classList.add('invalid'); if(errEl) errEl.style.display='block'; ok=false; }
+    else { el.classList.remove('invalid'); if(errEl) errEl.style.display='none'; }
+  });
+  const ds = document.getElementById('date-start').value;
+  const de = document.getElementById('date-end').value;
+  if(ds && de && de < ds){
+    document.getElementById('date-end').classList.add('invalid');
+    const e = document.getElementById('err-date-end');
+    if(e){ e.textContent='Deve ser após o início'; e.style.display='block'; }
+    ok = false;
+  }
+  return ok;
+}
+
+document.getElementById('service-form').addEventListener('submit', function(e){
+  e.preventDefault();
+  if(!validate()) return;
+  const vagas = parseInt(document.getElementById('vagas').value)||1;
+  const cond  = document.querySelector('#payment-cond .pill.selected');
+  const svc = {
+    id:           Date.now(),
+    client:       document.getElementById('client-name').value.trim(),
+    clientDoc:    document.getElementById('client-doc').value.trim(),
+    contact:      document.getElementById('client-contact').value.trim(),
+    phone:        document.getElementById('client-phone').value.trim(),
+    service:      document.getElementById('service-name').value.trim(),
+    location:     document.getElementById('service-location').value.trim(),
+    desc:         document.getElementById('service-desc').value.trim(),
+    dateStart:    document.getElementById('date-start').value,
+    dateEnd:      document.getElementById('date-end').value,
+    timeStart:    document.getElementById('time-start').value,
+    timeEnd:      document.getElementById('time-end').value,
+    vagas,        coberturas:0, coverObs:'', coverDetails:[],
+    payCollab:    parseFloat(document.getElementById('pay-collab').value)||0,
+    payCollabType:document.getElementById('pay-collab-type').value,
+    payObs:       document.getElementById('pay-obs').value.trim(),
+    payClient:    parseFloat(document.getElementById('payment-value').value)||0,
+    payType:      document.getElementById('payment-type').value,
+    payMethod:    document.getElementById('payment-method-sel').value,
+    payCond:      cond ? cond.textContent : '',
+    payClientObs: document.getElementById('payment-obs').value.trim(),
+    status:       'pending',
+    createdAt:    new Date().toLocaleDateString('pt-BR'),
+  };
+  services.unshift(svc);
+  // auto-cadastra o cliente se for novo
+  if(!clients.some(c => c.name.toLowerCase() === svc.client.toLowerCase())){
+    const nc = {id:Date.now()+1, name:svc.client, doc:svc.clientDoc, contact:svc.contact, phone:svc.phone, obs:''};
+    clients.unshift(nc);
+    saveToFb('clientes', nc);
+  }
+  save();
+  saveToFb('servicos', svc);
+  updateAlerts();
+  showToast('✓ Serviço lançado com sucesso!');
+  resetForm();
+});
+
+// remove borda vermelha ao digitar
+document.querySelectorAll('input,select').forEach(el => {
+  el.addEventListener('input', ()=>{
+    el.classList.remove('invalid');
+    const err = document.getElementById('err-'+el.id);
+    if(err){ err.style.display='none'; err.textContent='Campo obrigatório'; }
+  });
+});
+
+// ══════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.display = 'block';
+  clearTimeout(window._tt);
+  window._tt = setTimeout(()=>t.style.display='none', 3000);
+}
+
+// ══════════════════════════════════════════
+// TROCA DE ABAS PRINCIPAIS
+// ══════════════════════════════════════════
+function switchTab(tab){
+  document.getElementById('panel-form').style.display = tab==='form' ? 'block' : 'none';
+  document.getElementById('panel-db').style.display   = tab==='db'   ? 'block' : 'none';
+  document.getElementById('tab-form').classList.toggle('active', tab==='form');
+  document.getElementById('tab-db').classList.toggle('active',   tab==='db');
+  if(tab==='db') renderAll();
+}
+
+// ══════════════════════════════════════════
+// TROCA DE ABAS DO BANCO DE DADOS
+// ══════════════════════════════════════════
+function switchDbTab(name){
+  ['clients','supervisors','services'].forEach(t => {
+    document.getElementById('dbtab-'+t).classList.toggle('active', t===name);
+    document.getElementById('dbpanel-'+t).classList.toggle('active', t===name);
+  });
+  if(name==='clients')     renderClients();
+  if(name==='supervisors') renderSupervisors();
+  if(name==='services')    renderServices();
+}
+
+function renderAll(){
+  renderClients();
+  renderSupervisors();
+  renderServices();
+}
+
+// ══════════════════════════════════════════
+// RENDER CLIENTES
+// ══════════════════════════════════════════
+function renderClients(){
+  const q = (document.getElementById('db-search-clients')?.value||'').toLowerCase();
+  const list = clients.filter(c =>
+    c.name.toLowerCase().includes(q) ||
+    (c.doc||'').toLowerCase().includes(q) ||
+    (c.contact||'').toLowerCase().includes(q)
+  );
+  document.getElementById('db-count-clients').textContent = list.length+' registro(s)';
+  const tbody = document.getElementById('db-body-clients');
+  if(!list.length){
+    tbody.innerHTML = `<tr><td colspan="5" class="db-empty">Nenhum cliente cadastrado</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map(c => `
+    <tr>
+      <td><strong style="color:var(--white)">${c.name}</strong>${c.obs?`<br/><span style="font-size:11px;color:var(--muted)">${c.obs}</span>`:''}</td>
+      <td style="color:var(--muted)">${c.doc||'—'}</td>
+      <td>${c.contact||'—'}</td>
+      <td>${c.phone||'—'}</td>
+      <td class="td-actions">
+        <button onclick="editClient(${c.id})" title="Editar">✏️</button>
+        <button class="del" onclick="deleteClient(${c.id})" title="Excluir">🗑</button>
+      </td>
+    </tr>`).join('');
+}
+
+function editClient(id){
+  const c = clients.find(x => x.id === id); if(!c) return;
+  editingClientId = id;
+  _clearClientModal();
+  document.getElementById('modal-title').textContent = 'Editar Cliente';
+  document.getElementById('mc-name').value    = c.name;
+  document.getElementById('mc-doc').value     = c.doc||'';
+  document.getElementById('mc-contact').value = c.contact||'';
+  document.getElementById('mc-phone').value   = c.phone||'';
+  document.getElementById('mc-obs').value     = c.obs||'';
+  document.getElementById('modal-cliente').classList.add('open');
+}
+
+function deleteClient(id){
+  if(!confirm('Excluir este cliente?')) return;
+  clients = clients.filter(c => c.id !== id);
+  save(); renderClients(); deleteFromFb('clientes', id);
+  showToast('Cliente excluído.');
+}
+
+
+// ══════════════════════════════════════════
+// RENDER SUPERVISORES
+// ══════════════════════════════════════════
+function renderSupervisors(){
+  const q = (document.getElementById('db-search-supervisors')?.value||'').toLowerCase();
+  const list = supervisors.filter(s =>
+    s.name.toLowerCase().includes(q) ||
+    (s.cpf||'').toLowerCase().includes(q) ||
+    (s.email||'').toLowerCase().includes(q) ||
+    (s.role||'').toLowerCase().includes(q)
+  );
+  document.getElementById('db-count-supervisors').textContent = list.length+' registro(s)';
+  const tbody = document.getElementById('db-body-supervisors');
+  if(!list.length){
+    tbody.innerHTML = `<tr><td colspan="6" class="db-empty">Nenhum supervisor cadastrado</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map(s => `
+    <tr>
+      <td><strong style="color:var(--white)">${s.name}</strong>${s.mat?` <span style="font-size:11px;color:var(--cyan);margin-left:6px">${s.mat}</span>`:''}</td>
+      <td style="color:var(--muted)">${s.cpf||'—'}</td>
+      <td>${s.phone||'—'}</td>
+      <td>${s.email||'—'}</td>
+      <td>${s.role||'—'}</td>
+      <td class="td-actions">
+        <button onclick="editSupervisor(${s.id})" title="Editar">✏️</button>
+        <button class="del" onclick="deleteSupervisor(${s.id})" title="Excluir">🗑</button>
+      </td>
+    </tr>`).join('');
+}
+
+let editingSupId = null;
+function openSupervisorModal(prefill){
+  editingSupId = null;
+  _clearSupModal();
+  document.getElementById('modal-sup-title').textContent = 'Novo Supervisor';
+  if(prefill) document.getElementById('ms-name').value = prefill;
+  document.getElementById('modal-supervisor').classList.add('open');
+  setTimeout(()=>document.getElementById('ms-name')?.focus(),50);
+}
+function closeSupervisorModal(){
+  document.getElementById('modal-supervisor').classList.remove('open');
+  editingSupId = null; _clearSupModal();
+}
+function _clearSupModal(){
+  ['ms-name','ms-cpf','ms-phone','ms-email','ms-mat'].forEach(id=>{
+    const el=document.getElementById(id); if(el){el.value='';el.defaultValue='';el.removeAttribute('value');}
+  });
+  const obs=document.getElementById('ms-obs'); if(obs){obs.value='';obs.textContent='';}
+  const sel=document.getElementById('ms-role'); if(sel) sel.selectedIndex=0;
+  const err=document.getElementById('ms-err-name'); if(err) err.style.display='none';
+  document.getElementById('ms-name')?.classList.remove('invalid');
+}
+function editSupervisor(id){
+  const s=supervisors.find(x=>x.id===id); if(!s) return;
+  editingSupId=id;
+  _clearSupModal();
+  document.getElementById('modal-sup-title').textContent='Editar Supervisor';
+  document.getElementById('ms-name').value  = s.name;
+  document.getElementById('ms-cpf').value   = s.cpf||'';
+  document.getElementById('ms-phone').value = s.phone||'';
+  document.getElementById('ms-email').value = s.email||'';
+  document.getElementById('ms-mat').value   = s.mat||'';
+  document.getElementById('ms-obs').value   = s.obs||'';
+  const sel=document.getElementById('ms-role');
+  if(sel && s.role){
+    for(let i=0;i<sel.options.length;i++) if(sel.options[i].text===s.role){sel.selectedIndex=i;break;}
+  }
+  document.getElementById('modal-supervisor').classList.add('open');
+}
+function deleteSupervisor(id){
+  if(!confirm('Excluir este supervisor?')) return;
+  supervisors=supervisors.filter(s=>s.id!==id);
+  save(); renderSupervisors(); deleteFromFb('supervisores', id);
+  showToast('Supervisor excluído.');
+}
+function saveSupervisor(){
+  const nameEl=document.getElementById('ms-name');
+  const name=(nameEl?.value||'').trim();
+  if(!name){ nameEl?.classList.add('invalid'); document.getElementById('ms-err-name').style.display='block'; return; }
+  if(editingSupId){
+    const s=supervisors.find(x=>x.id===editingSupId);
+    if(s){
+      s.name  = name;
+      s.cpf   = (document.getElementById('ms-cpf')?.value||'').trim();
+      s.phone = (document.getElementById('ms-phone')?.value||'').trim();
+      s.email = (document.getElementById('ms-email')?.value||'').trim();
+      s.role  = document.getElementById('ms-role')?.value||'';
+      s.mat   = (document.getElementById('ms-mat')?.value||'').trim();
+      s.obs   = (document.getElementById('ms-obs')?.value||'').trim();
+      save(); renderSupervisors(); closeSupervisorModal();
+      showToast('✓ Supervisor "'+name+'" atualizado!');
+      saveToFb('supervisores', s);
+      return;
+    }
+  }
+  const s={id:Date.now(),name,
+    cpf:(document.getElementById('ms-cpf')?.value||'').trim(),
+    phone:(document.getElementById('ms-phone')?.value||'').trim(),
+    email:(document.getElementById('ms-email')?.value||'').trim(),
+    role:document.getElementById('ms-role')?.value||'',
+    mat:(document.getElementById('ms-mat')?.value||'').trim(),
+    obs:(document.getElementById('ms-obs')?.value||'').trim(),
+  };
+  supervisors.unshift(s);
+  save(); renderSupervisors(); closeSupervisorModal();
+  saveToFb('supervisores', s);
+  showToast('✓ Supervisor "'+name+'" cadastrado!');
+}
+
+// ══════════════════════════════════════════
+// RENDER SERVIÇOS
+// ══════════════════════════════════════════
+function renderServices(){
+  const q=(document.getElementById('db-search-services')?.value||'').toLowerCase();
+  const list=services.filter(s=>
+    s.client.toLowerCase().includes(q) ||
+    (s.service||'').toLowerCase().includes(q) ||
+    (s.location||'').toLowerCase().includes(q)
+  );
+  document.getElementById('db-count-services').textContent=list.length+' registro(s)';
+  const tbody=document.getElementById('db-body-services');
+  if(!list.length){
+    tbody.innerHTML=`<tr><td colspan="8" class="db-empty">Nenhum serviço lançado</td></tr>`;
+    return;
+  }
+  const fmt=d=>d?new Date(d+'T00:00:00').toLocaleDateString('pt-BR'):'—';
+  const statusBadge=s=>{
+    if(s.status==='done') return '<span class="badge-status badge-done">Completo</span>';
+    if(s.status==='partial') return '<span class="badge-status badge-partial">Parcial</span>';
+    return '<span class="badge-status badge-pending">Pendente</span>';
+  };
+  tbody.innerHTML=list.map(s=>`
+    <tr>
+      <td><strong style="color:var(--white)">${s.client}</strong></td>
+      <td>${s.service||'—'}</td>
+      <td>${s.location||'—'}</td>
+      <td style="white-space:nowrap">${fmt(s.dateStart)}</td>
+      <td style="text-align:center">${s.coberturas||0}/${s.vagas||1}</td>
+      <td style="color:var(--accent)">R$ ${(s.payClient||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+      <td>${statusBadge(s)}</td>
+      <td class="td-actions">
+        <button onclick="viewService(${s.id})" title="Ver detalhes">👁</button>
+        <button class="del" onclick="deleteService(${s.id})" title="Excluir">🗑</button>
+      </td>
+    </tr>`).join('');
+}
+
+function viewService(id){
+  const s=services.find(x=>x.id===id); if(!s) return;
+  const fmt=d=>d?new Date(d+'T00:00:00').toLocaleDateString('pt-BR'):'—';
+  const body=document.getElementById('modal-service-body');
+  body.innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 18px">
+      <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Cliente</span><div style="color:var(--white);font-weight:600;margin-top:3px">${s.client}</div></div>
+      <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">CNPJ/CPF</span><div style="margin-top:3px">${s.clientDoc||'—'}</div></div>
+      <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Serviço</span><div style="color:var(--white);margin-top:3px">${s.service||'—'}</div></div>
+      <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Local</span><div style="margin-top:3px">${s.location||'—'}</div></div>
+      <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Período</span><div style="margin-top:3px">${fmt(s.dateStart)} → ${fmt(s.dateEnd)}</div></div>
+      <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Horário</span><div style="margin-top:3px">${s.timeStart||'—'} – ${s.timeEnd||'—'}</div></div>
+      <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Vagas / Cobertura</span><div style="color:var(--cyan);margin-top:3px">${s.coberturas||0} / ${s.vagas||1}</div></div>
+      <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Valor cliente</span><div style="color:var(--accent);margin-top:3px">R$ ${(s.payClient||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</div></div>
+      <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Valor colaborador</span><div style="margin-top:3px">R$ ${(s.payCollab||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</div></div>
+      <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Forma pag.</span><div style="margin-top:3px">${s.payMethod||'—'} ${s.payCond?'· '+s.payCond:''}</div></div>
+      ${s.desc?`<div style="grid-column:1/-1"><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Descrição</span><div style="margin-top:3px">${s.desc}</div></div>`:''}
+    </div>`;
+  document.getElementById('modal-service-view').classList.add('open');
+}
+function closeServiceModal(){
+  document.getElementById('modal-service-view').classList.remove('open');
+}
+function deleteService(id){
+  if(!confirm('Excluir este serviço?')) return;
+  services=services.filter(s=>s.id!==id);
+  save(); renderServices(); updateAlerts(); deleteFromFb('servicos', id);
+  showToast('Serviço excluído.');
+}
+
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  updateAlerts();
+  // garante painel correto visível ao carregar
+  document.getElementById('panel-form').style.display = 'block';
+  document.getElementById('panel-db').style.display   = 'none';
+  // inicia diagnóstico
+  setTimeout(diagRefresh, 800);
+});
+
+// ══════════════════════════════════════════
+// DIAGNÓSTICO FIREBASE
+// ══════════════════════════════════════════
+const diagLogEntries = [];
+
+function diagLog(type, msg){
+  const now = new Date().toLocaleTimeString('pt-BR');
+  diagLogEntries.unshift({type, msg, time: now});
+  if(diagLogEntries.length > 40) diagLogEntries.length = 40;
+  const el = document.getElementById('diag-log');
+  if(!el) return;
+  const icons = {ok:'●', err:'●', warn:'▲', info:'◆'};
+  el.innerHTML = diagLogEntries.map(e =>
+    `<div class="diag-log-entry ${e.type}"><span class="diag-log-dot">${icons[e.type]||'·'}</span><span>[${e.time}] ${e.msg}</span></div>`
+  ).join('');
+}
+
+function diagSetDot(state){
+  const dot = document.getElementById('diag-dot');
+  const lbl = document.getElementById('diag-fab-label');
+  if(!dot) return;
+  dot.className = 'diag-dot ' + state;
+  if(state==='ok')   lbl.textContent = 'Firebase OK';
+  if(state==='warn') lbl.textContent = 'Firebase AVISO';
+  if(state==='err')  lbl.textContent = 'Firebase ERRO';
+  if(state==='')     lbl.textContent = 'Firebase';
+}
+
+function diagVal(id, text, cls){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.textContent = text;
+  el.className = 'diag-row-val ' + (cls||'diag-val-muted');
+}
+
+async function diagRefresh(){
+  diagVal('diag-sdk', typeof firebase !== 'undefined' ? 'Carregado' : 'NÃO ENCONTRADO',
+    typeof firebase !== 'undefined' ? 'diag-val-ok' : 'diag-val-err');
+
+  diagVal('diag-project', firebaseConfig.projectId, 'diag-val-info');
+
+  if(!fbReady){
+    diagVal('diag-firestore', fbError ? 'ERRO: '+fbError.slice(0,30) : 'Não inicializado', 'diag-val-err');
+    diagVal('diag-mode', 'Somente localStorage', 'diag-val-warn');
+    diagVal('diag-col-services','—','diag-val-muted');
+    diagVal('diag-col-clients','—','diag-val-muted');
+    diagVal('diag-col-supervisors','—','diag-val-muted');
+    diagSetDot('err');
+    diagLog('err', 'Firestore não disponível');
+    return;
+  }
+
+  // Testa conexão com uma leitura rápida
+  try {
+    const t0 = Date.now();
+    await db.collection('_diag_ping').limit(1).get();
+    const ms = Date.now() - t0;
+    diagVal('diag-firestore', 'Conectado ('+ms+'ms)', 'diag-val-ok');
+    diagVal('diag-mode', 'Firestore + localStorage', 'diag-val-ok');
+    diagSetDot('ok');
+    diagLog('ok', 'Ping Firestore: '+ms+'ms');
+  } catch(e) {
+    if(e.code === 'permission-denied'){
+      diagVal('diag-firestore', 'Permissão negada', 'diag-val-warn');
+      diagVal('diag-mode', 'Verifique Regras do Firestore', 'diag-val-warn');
+      diagSetDot('warn');
+      diagLog('warn', 'permission-denied: configure as regras no Console Firebase');
+    } else {
+      diagVal('diag-firestore', 'Erro: '+e.code, 'diag-val-err');
+      diagVal('diag-mode', 'Somente localStorage (fallback)', 'diag-val-warn');
+      diagSetDot('err');
+      diagLog('err', 'Firestore: '+e.message);
+    }
+  }
+
+  // Conta docs nas coleções
+  for(const [col, label] of [['servicos','diag-col-services'],['clientes','diag-col-clients'],['supervisores','diag-col-supervisors']]){
+    try {
+      const snap = await db.collection(col).get();
+      diagVal(label, snap.size + ' doc(s)', snap.size > 0 ? 'diag-val-ok' : 'diag-val-muted');
+    } catch(e) {
+      diagVal(label, 'Sem acesso', 'diag-val-warn');
+    }
+  }
+}
+
+async function diagTestWrite(){
+  if(!fbReady || !db){ showToast('Firebase não disponível!'); return; }
+  diagLog('info', 'Iniciando teste de escrita…');
+  try {
+    const ref = db.collection('_diag_ping').doc('test_'+Date.now());
+    await ref.set({ ts: new Date().toISOString(), test: true });
+    await ref.delete();
+    diagLog('ok', 'Escrita e leitura OK no Firestore');
+    showToast('✓ Teste de escrita Firebase OK!');
+    diagSetDot('ok');
+  } catch(e) {
+    diagLog('err', 'Falha na escrita: '+e.message);
+    showToast('Erro na escrita Firebase: '+e.code);
+    diagSetDot(e.code === 'permission-denied' ? 'warn' : 'err');
+  }
+}
+
+async function diagSyncToFirestore(){
+  if(!fbReady || !db){ showToast('Firebase não disponível!'); return; }
+  if(!confirm('Sincronizar todos os dados do localStorage para o Firestore?\n(Isso vai sobrescrever documentos existentes com mesmo ID)')) return;
+  diagLog('info', 'Iniciando sync localStorage → Firestore…');
+  let count = 0;
+  const batch = db.batch();
+  try {
+    services.forEach(s    => { batch.set(db.collection('servicos').doc(String(s.id)), s); count++; });
+    clients.forEach(c     => { batch.set(db.collection('clientes').doc(String(c.id)), c); count++; });
+    supervisors.forEach(s => { batch.set(db.collection('supervisores').doc(String(s.id)), s); count++; });
+    await batch.commit();
+    diagLog('ok', 'Sync concluído: '+count+' documento(s) enviados');
+    showToast('✓ Sync completo: '+count+' registros enviados ao Firestore!');
+    diagSetDot('ok');
+    diagRefresh();
+  } catch(e) {
+    diagLog('err', 'Sync falhou: '+e.message);
+    showToast('Erro no sync: '+e.code);
+  }
+}
+
+function toggleDiag(){
+  const panel = document.getElementById('diag-panel');
+  panel.classList.toggle('open');
+  if(panel.classList.contains('open')) diagRefresh();
+}
+</script>
+</body>
+</html>
