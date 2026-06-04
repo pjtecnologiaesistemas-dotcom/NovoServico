@@ -352,6 +352,7 @@
     .svc-card-actions button{background:none;border:1px solid rgba(0,200,248,.15);border-radius:6px;color:var(--muted);font-size:.8rem;cursor:pointer;padding:5px 11px;transition:all .18s}
     .svc-card-actions button:hover{background:rgba(0,200,248,.08);border-color:var(--cyan);color:var(--cyan)}
     .svc-card-actions button.del:hover{background:rgba(224,92,92,.08);border-color:var(--danger);color:var(--danger)}
+    .svc-card-actions button.edit:hover{background:rgba(240,165,0,.08);border-color:var(--accent);color:var(--accent)}
     .svc-card-vagas{display:flex;align-items:center;gap:6px}
     .svc-card-vagas-bar{width:60px;height:5px;background:rgba(0,200,248,.1);border-radius:3px;overflow:hidden;flex-shrink:0}
     .svc-card-vagas-fill{height:100%;border-radius:3px;transition:width .3s}
@@ -1062,6 +1063,109 @@
     <div class="modal-body" id="modal-service-body"></div>
     <div class="modal-footer">
       <button type="button" class="btn-ghost" onclick="closeServiceModal()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR SERVIÇO -->
+<div class="modal-overlay" id="modal-service-edit">
+  <div class="modal-box" style="max-width:620px">
+    <div class="modal-header">
+      <div class="modal-header-title">✏️ Editar Serviço</div>
+      <button type="button" class="modal-close" onclick="closeEditServiceModal()">✕</button>
+    </div>
+    <div class="modal-body" style="padding:18px 20px;overflow-y:auto;max-height:calc(100vh - 220px)">
+      <input type="hidden" id="edit-svc-id"/>
+      <!-- Cliente -->
+      <div style="margin-bottom:14px">
+        <label style="font-family:'Rajdhani',sans-serif;font-size:.6rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);display:block;margin-bottom:6px">Cliente <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="edit-client" style="width:100%;background:var(--surface2);border:1px solid rgba(0,200,248,.18);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:10px 13px;outline:none;transition:border-color .2s" onfocus="this.style.borderColor='var(--cyan)'" onblur="this.style.borderColor='rgba(0,200,248,.18)'"/>
+      </div>
+      <!-- Tipo de serviço -->
+      <div style="margin-bottom:14px">
+        <label style="font-family:'Rajdhani',sans-serif;font-size:.6rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);display:block;margin-bottom:6px">Tipo de Serviço</label>
+        <select id="edit-service" style="width:100%;background:var(--surface2);border:1px solid rgba(0,200,248,.18);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:10px 13px;outline:none;cursor:pointer">
+          <option value="">Selecione…</option>
+        </select>
+      </div>
+      <!-- Local -->
+      <div style="margin-bottom:14px">
+        <label style="font-family:'Rajdhani',sans-serif;font-size:.6rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);display:block;margin-bottom:6px">Local de Execução</label>
+        <input type="text" id="edit-location" style="width:100%;background:var(--surface2);border:1px solid rgba(0,200,248,.18);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:10px 13px;outline:none;transition:border-color .2s" onfocus="this.style.borderColor='var(--cyan)'" onblur="this.style.borderColor='rgba(0,200,248,.18)'"/>
+      </div>
+      <!-- Período -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+        <div>
+          <label style="font-family:'Rajdhani',sans-serif;font-size:.6rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);display:block;margin-bottom:6px">Data Início <span style="color:var(--danger)">*</span></label>
+          <input type="date" id="edit-date-start" style="width:100%;background:var(--surface2);border:1px solid rgba(0,200,248,.18);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:10px 13px;outline:none;transition:border-color .2s" onfocus="this.style.borderColor='var(--cyan)'" onblur="this.style.borderColor='rgba(0,200,248,.18)'"/>
+        </div>
+        <div>
+          <label style="font-family:'Rajdhani',sans-serif;font-size:.6rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);display:block;margin-bottom:6px">Data Fim</label>
+          <input type="date" id="edit-date-end" style="width:100%;background:var(--surface2);border:1px solid rgba(0,200,248,.18);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:10px 13px;outline:none;transition:border-color .2s" onfocus="this.style.borderColor='var(--cyan)'" onblur="this.style.borderColor='rgba(0,200,248,.18)'"/>
+        </div>
+      </div>
+      <!-- Horários -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+        <div>
+          <label style="font-family:'Rajdhani',sans-serif;font-size:.6rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);display:block;margin-bottom:6px">Horário Início</label>
+          <input type="time" id="edit-time-start" style="width:100%;background:var(--surface2);border:1px solid rgba(0,200,248,.18);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:10px 13px;outline:none;transition:border-color .2s" onfocus="this.style.borderColor='var(--cyan)'" onblur="this.style.borderColor='rgba(0,200,248,.18)'"/>
+        </div>
+        <div>
+          <label style="font-family:'Rajdhani',sans-serif;font-size:.6rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);display:block;margin-bottom:6px">Horário Fim</label>
+          <input type="time" id="edit-time-end" style="width:100%;background:var(--surface2);border:1px solid rgba(0,200,248,.18);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:10px 13px;outline:none;transition:border-color .2s" onfocus="this.style.borderColor='var(--cyan)'" onblur="this.style.borderColor='rgba(0,200,248,.18)'"/>
+        </div>
+      </div>
+      <!-- Escala -->
+      <div style="margin-bottom:14px">
+        <label style="font-family:'Rajdhani',sans-serif;font-size:.6rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);display:block;margin-bottom:8px">Escala de Rodízio</label>
+        <div style="display:flex;gap:8px">
+          <label style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--surface2);border:1px solid rgba(0,200,248,.18);border-radius:8px;padding:9px 10px;cursor:pointer;transition:all .2s;font-family:'Rajdhani',sans-serif;font-size:.72rem;font-weight:600;letter-spacing:.5px"><input type="radio" name="edit-escala" value="par" style="accent-color:var(--cyan)"/> ☀️ Par</label>
+          <label style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--surface2);border:1px solid rgba(0,200,248,.18);border-radius:8px;padding:9px 10px;cursor:pointer;transition:all .2s;font-family:'Rajdhani',sans-serif;font-size:.72rem;font-weight:600;letter-spacing:.5px"><input type="radio" name="edit-escala" value="impar" style="accent-color:var(--cyan)"/> 🌙 Ímpar</label>
+          <label style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--surface2);border:1px solid rgba(0,200,248,.18);border-radius:8px;padding:9px 10px;cursor:pointer;transition:all .2s;font-family:'Rajdhani',sans-serif;font-size:.72rem;font-weight:600;letter-spacing:.5px"><input type="radio" name="edit-escala" value="todo" style="accent-color:var(--cyan)"/> ✅ Todo</label>
+        </div>
+      </div>
+      <!-- Vagas e Coberturas -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+        <div>
+          <label style="font-family:'Rajdhani',sans-serif;font-size:.6rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);display:block;margin-bottom:6px">Vagas</label>
+          <input type="number" id="edit-vagas" min="1" max="99" style="width:100%;background:var(--surface2);border:1px solid rgba(0,200,248,.18);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:10px 13px;outline:none;transition:border-color .2s" onfocus="this.style.borderColor='var(--cyan)'" onblur="this.style.borderColor='rgba(0,200,248,.18)'"/>
+        </div>
+        <div>
+          <label style="font-family:'Rajdhani',sans-serif;font-size:.6rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);display:block;margin-bottom:6px">Coberturas</label>
+          <input type="number" id="edit-coberturas" min="0" max="99" style="width:100%;background:var(--surface2);border:1px solid rgba(0,200,248,.18);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:10px 13px;outline:none;transition:border-color .2s" onfocus="this.style.borderColor='var(--cyan)'" onblur="this.style.borderColor='rgba(0,200,248,.18)'"/>
+        </div>
+      </div>
+      <!-- Supervisor -->
+      <div style="margin-bottom:14px">
+        <label style="font-family:'Rajdhani',sans-serif;font-size:.6rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);display:block;margin-bottom:6px">Supervisor</label>
+        <select id="edit-supervisor" style="width:100%;background:var(--surface2);border:1px solid rgba(0,200,248,.18);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:10px 13px;outline:none;cursor:pointer">
+          <option value="">— Não informado —</option>
+        </select>
+      </div>
+      <!-- Valor colaborador -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+        <div>
+          <label style="font-family:'Rajdhani',sans-serif;font-size:.6rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);display:block;margin-bottom:6px">Valor Colaborador (R$)</label>
+          <input type="number" id="edit-pay-collab" min="0" step="0.01" placeholder="0,00" style="width:100%;background:var(--surface2);border:1px solid rgba(0,200,248,.18);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:10px 13px;outline:none;transition:border-color .2s" onfocus="this.style.borderColor='var(--cyan)'" onblur="this.style.borderColor='rgba(0,200,248,.18)'"/>
+        </div>
+        <div>
+          <label style="font-family:'Rajdhani',sans-serif;font-size:.6rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);display:block;margin-bottom:6px">Valor Cliente (R$)</label>
+          <input type="number" id="edit-pay-client" min="0" step="0.01" placeholder="0,00" style="width:100%;background:var(--surface2);border:1px solid rgba(0,200,248,.18);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:10px 13px;outline:none;transition:border-color .2s" onfocus="this.style.borderColor='var(--cyan)'" onblur="this.style.borderColor='rgba(0,200,248,.18)'"/>
+        </div>
+      </div>
+      <!-- Status -->
+      <div style="margin-bottom:6px">
+        <label style="font-family:'Rajdhani',sans-serif;font-size:.6rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);display:block;margin-bottom:6px">Status</label>
+        <select id="edit-status" style="width:100%;background:var(--surface2);border:1px solid rgba(0,200,248,.18);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:10px 13px;outline:none;cursor:pointer">
+          <option value="pending">Pendente</option>
+          <option value="partial">Parcial</option>
+          <option value="done">Completo</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-ghost" onclick="closeEditServiceModal()">Cancelar</button>
+      <button type="button" class="btn-primary" style="font-size:.62rem;padding:10px 22px" onclick="saveEditService()">💾 Salvar Alterações</button>
     </div>
   </div>
 </div>
@@ -2390,6 +2494,7 @@ function renderServices(){
         </div>
         <div class="svc-card-actions">
           <button onclick="viewService(${s.id})" title="Ver detalhes">👁 Ver</button>
+          <button class="edit" onclick="editService(${s.id})" title="Editar serviço">✏️</button>
           <button class="del" onclick="deleteService(${s.id})" title="Excluir">🗑</button>
         </div>
       </div>
@@ -2430,6 +2535,79 @@ function deleteService(id){
   services=services.filter(s=>s.id!==id);
   save(); renderServices(); updateAlerts(); deleteFromFb('servicos', id);
   showToast('Serviço excluído.');
+}
+
+function editService(id){
+  const s=services.find(x=>x.id===id); if(!s) return;
+
+  document.getElementById('edit-svc-id').value = id;
+  document.getElementById('edit-client').value = s.client||'';
+  document.getElementById('edit-location').value = s.location||'';
+  document.getElementById('edit-date-start').value = s.dateStart||'';
+  document.getElementById('edit-date-end').value = s.dateEnd||'';
+  document.getElementById('edit-time-start').value = s.timeStart||'';
+  document.getElementById('edit-time-end').value = s.timeEnd||'';
+  document.getElementById('edit-vagas').value = s.vagas||1;
+  document.getElementById('edit-coberturas').value = s.coberturas||0;
+  document.getElementById('edit-pay-collab').value = s.payCollab||0;
+  document.getElementById('edit-pay-client').value = s.payClient||0;
+  document.getElementById('edit-status').value = s.status||'pending';
+
+  // Escala
+  const escVal = s.escala||'todo';
+  document.querySelectorAll('input[name="edit-escala"]').forEach(r=>{ r.checked = r.value===escVal; });
+
+  // Popula tipo de serviço
+  const sel = document.getElementById('edit-service');
+  sel.innerHTML = '<option value="">Selecione…</option>';
+  serviceTypes.forEach(t=>{ const o=document.createElement('option'); o.value=t; o.textContent=t; if(t===s.service) o.selected=true; sel.appendChild(o); });
+
+  // Popula supervisores
+  const supSel = document.getElementById('edit-supervisor');
+  supSel.innerHTML = '<option value="">— Não informado —</option>';
+  supervisors.forEach(sv=>{ const o=document.createElement('option'); o.value=sv.name; o.textContent=sv.name; if(sv.name===s.supervisor) o.selected=true; supSel.appendChild(o); });
+
+  document.getElementById('modal-service-edit').classList.add('open');
+}
+
+function closeEditServiceModal(){
+  document.getElementById('modal-service-edit').classList.remove('open');
+}
+
+function saveEditService(){
+  const id = parseInt(document.getElementById('edit-svc-id').value);
+  const client = document.getElementById('edit-client').value.trim();
+  if(!client){ showToast('⚠️ Informe o nome do cliente.'); return; }
+  const dateStart = document.getElementById('edit-date-start').value;
+  if(!dateStart){ showToast('⚠️ Informe a data de início.'); return; }
+
+  const idx = services.findIndex(x=>x.id===id);
+  if(idx<0){ showToast('Serviço não encontrado.'); return; }
+
+  const escalaChecked = document.querySelector('input[name="edit-escala"]:checked');
+
+  services[idx] = {
+    ...services[idx],
+    client,
+    service: document.getElementById('edit-service').value||services[idx].service,
+    location: document.getElementById('edit-location').value.trim()||services[idx].location,
+    dateStart,
+    dateEnd: document.getElementById('edit-date-end').value||dateStart,
+    timeStart: document.getElementById('edit-time-start').value||services[idx].timeStart,
+    timeEnd: document.getElementById('edit-time-end').value||services[idx].timeEnd,
+    escala: escalaChecked ? escalaChecked.value : (services[idx].escala||'todo'),
+    vagas: parseInt(document.getElementById('edit-vagas').value)||1,
+    coberturas: parseInt(document.getElementById('edit-coberturas').value)||0,
+    payCollab: parseFloat(document.getElementById('edit-pay-collab').value)||0,
+    payClient: parseFloat(document.getElementById('edit-pay-client').value)||0,
+    supervisor: document.getElementById('edit-supervisor').value||'',
+    status: document.getElementById('edit-status').value||'pending',
+  };
+
+  save(); renderServices(); updateAlerts();
+  saveToFb('servicos', services[idx]);
+  closeEditServiceModal();
+  showToast('✓ Serviço atualizado com sucesso!');
 }
 
 
