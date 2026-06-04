@@ -2486,7 +2486,7 @@ function renderServices(){
     s.client.toLowerCase().includes(q) ||
     (s.service||'').toLowerCase().includes(q) ||
     (s.location||'').toLowerCase().includes(q)
-  );
+  ).sort((a,b)=>(b.id||0)-(a.id||0));
   document.getElementById('db-count-services').textContent=list.length+' registro(s)';
   const container=document.getElementById('svc-cards-list');
   if(!list.length){
