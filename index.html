@@ -3481,6 +3481,7 @@ async function _pushSend(title, body, tag, data) {
   if (reg) {
     try {
       await reg.showNotification(title, opts);
+      playAlertSound();   // app aberto: toca o som imediatamente
       return;
     } catch(e) {
       console.warn('[PUSH] showNotification falhou, usando fallback:', e);
@@ -3488,7 +3489,7 @@ async function _pushSend(title, body, tag, data) {
   }
 
   // Fallback: notificação direta (só funciona com app aberto)
-  try { new Notification(title, opts); } catch(e) { console.warn('[PUSH] Fallback também falhou:', e); }
+  try { new Notification(title, opts); playAlertSound(); } catch(e) { console.warn('[PUSH] Fallback também falhou:', e); }
 }
 
 /* ─────────────────────────────────────────────
@@ -3565,7 +3566,56 @@ function pushIfUncovered(svc) {
 }
 
 // Inicia o PWA após o DOM carregar
-window.addEventListener('load', () => { initPWA(); });
+window.addEventListener('load', () => {
+  initPWA();
+  _soundListenSW();
+});
+
+/* ================================================================
+   SOM DE ALERTA — Web Audio API (sem arquivo externo)
+   Toca quando: app aberto (direto) ou SW manda PLAY_ALERT_SOUND
+   ================================================================ */
+
+/* ── Gera o som via osciladores (funciona offline, sem arquivo) ── */
+function playAlertSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+    function note(freq, start, dur, vol) {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+      gain.gain.setValueAtTime(0, ctx.currentTime + start);
+      gain.gain.linearRampToValueAtTime(vol, ctx.currentTime + start + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
+      osc.start(ctx.currentTime + start);
+      osc.stop(ctx.currentTime + start + dur + 0.05);
+    }
+
+    // 3 bipes ascendentes — alerta de urgência
+    note(880,  0.00, 0.12, 0.6);  // Lá5
+    note(880,  0.00, 0.12, 0.3);  // harmônico
+    note(1046, 0.16, 0.12, 0.6);  // Dó6
+    note(1318, 0.32, 0.22, 0.7);  // Mi6 — final mais longo
+
+    setTimeout(() => ctx.close(), 700);
+  } catch(e) {
+    console.warn('[SOM] Web Audio falhou:', e);
+  }
+}
+
+/* ── Escuta mensagem do SW para tocar o som quando app está aberto ── */
+function _soundListenSW() {
+  if (!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.addEventListener('message', event => {
+    if (event.data && event.data.type === 'PLAY_ALERT_SOUND') {
+      playAlertSound();
+    }
+  });
+}
 </script>
 </body>
 </html>
