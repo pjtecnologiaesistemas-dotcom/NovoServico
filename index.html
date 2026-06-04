@@ -874,7 +874,9 @@
           <div class="hist-filter-row1">
             <div class="field">
               <label>Cliente</label>
-              <input class="db-search" id="hist-f-client" placeholder="Buscar cliente…" oninput="renderHistorico()" style="max-width:100%"/>
+              <select id="hist-f-client" class="hist-select" onchange="renderHistorico()">
+                <option value="">Todos os clientes</option>
+              </select>
             </div>
             <div class="field">
               <label>Tipo de Serviço</label>
@@ -923,6 +925,7 @@
           <span class="db-count" id="hist-count"></span>
           <div style="display:flex;gap:8px">
             <button type="button" onclick="histExportCSV()" style="background:rgba(63,207,142,.08);border:1px solid rgba(63,207,142,.22);border-radius:6px;color:var(--success);font-family:'Orbitron',sans-serif;font-size:.5rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:7px 14px;cursor:pointer;transition:all .2s">⬇ CSV</button>
+            <button type="button" onclick="histExportPDF()" style="background:rgba(240,165,0,.08);border:1px solid rgba(240,165,0,.22);border-radius:6px;color:var(--warn);font-family:'Orbitron',sans-serif;font-size:.5rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:7px 14px;cursor:pointer;transition:all .2s">⬇ PDF</button>
           </div>
         </div>
 
@@ -2468,7 +2471,7 @@ async function diagSyncToFirestore(){
 // HISTÓRICO CONSOLIDADO
 // ══════════════════════════════════════════
 function histGetFiltered(){
-  const qClient = (document.getElementById('hist-f-client')?.value||'').toLowerCase().trim();
+  const qClient = (document.getElementById('hist-f-client')?.value||'').trim();
   const qType   = (document.getElementById('hist-f-type')?.value||'');
   const qStatus = (document.getElementById('hist-f-status')?.value||'');
   const qSup    = (document.getElementById('hist-f-sup')?.value||'').toLowerCase().trim();
@@ -2477,7 +2480,7 @@ function histGetFiltered(){
   const order   = document.getElementById('hist-f-order')?.value||'recent';
 
   let list = services.filter(s => {
-    if(qClient && !s.client.toLowerCase().includes(qClient)) return false;
+    if(qClient && s.client !== qClient) return false;
     if(qType   && s.service !== qType) return false;
     if(qStatus && s.status !== qStatus) return false;
     if(qSup){
@@ -2508,8 +2511,19 @@ function histPopulateTypeFilter(){
     serviceTypes.map(t => `<option value="${t}"${t===cur?' selected':''}>${t}</option>`).join('');
 }
 
+function histPopulateClientFilter(){
+  const sel = document.getElementById('hist-f-client');
+  if(!sel) return;
+  const cur = sel.value;
+  // Pega clientes únicos dos serviços registrados
+  const clientsInServices = [...new Set(services.map(s => s.client).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  sel.innerHTML = '<option value="">Todos os clientes</option>' +
+    clientsInServices.map(c => `<option value="${c}"${c===cur?' selected':''}>${c}</option>`).join('');
+}
+
 function renderHistorico(){
   histPopulateTypeFilter();
+  histPopulateClientFilter();
   const list = histGetFiltered();
   const fmt  = d => d ? new Date(d+'T00:00:00').toLocaleDateString('pt-BR') : '—';
   const fmtR = v => v ? 'R$ '+parseFloat(v).toLocaleString('pt-BR',{minimumFractionDigits:2}) : '—';
@@ -2674,12 +2688,14 @@ function histToggleCard(id){
 }
 
 function histClearFilters(){
-  ['hist-f-client','hist-f-sup','hist-f-date-from','hist-f-date-to'].forEach(id => {
+  ['hist-f-client','hist-f-type','hist-f-status','hist-f-order'].forEach(id => {
+    const el = document.getElementById(id); if(el){ el.selectedIndex = 0; }
+  });
+  ['hist-f-sup'].forEach(id => {
     const el = document.getElementById(id); if(el) el.value='';
   });
-  ['hist-f-type','hist-f-status','hist-f-order'].forEach(id => {
-    const el = document.getElementById(id);
-    if(el){ el.selectedIndex = 0; }
+  ['hist-f-date-from','hist-f-date-to'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.value='';
   });
   renderHistorico();
 }
@@ -2710,6 +2726,95 @@ function histExportCSV(){
   a.download = 'historico_servicos_' + new Date().toISOString().slice(0,10) + '.csv';
   a.click();
   showToast('✓ CSV exportado!');
+}
+
+function histExportPDF(){
+  const list = histGetFiltered();
+  if(!list.length){ showToast('Nenhum registro para exportar!'); return; }
+
+  const fmt  = d => d ? new Date(d+'T00:00:00').toLocaleDateString('pt-BR') : '—';
+  const fmtR = v => v ? 'R$ '+parseFloat(v).toLocaleString('pt-BR',{minimumFractionDigits:2}) : '—';
+  const statusLabel = {done:'Completo', partial:'Parcial', pending:'Pendente'};
+  const escalaMap   = {par:'Par (☀)', impar:'Ímpar (🌙)', todo:'Todo (✅)'};
+
+  const clienteAtivo = document.getElementById('hist-f-client')?.value || '';
+  const titulo = clienteAtivo ? `Histórico — ${clienteAtivo}` : 'Histórico Consolidado de Serviços';
+
+  const totalReceita = list.reduce((a,s)=>a+(s.payClient||0),0);
+  const totalCusto   = list.reduce((a,s)=>a+((s.payCollab||0)*(s.vagas||1)),0);
+  const totalMargem  = totalReceita - totalCusto;
+
+  const rows = list.map(s => {
+    const per    = s.dateStart ? fmt(s.dateStart)+(s.dateEnd&&s.dateEnd!==s.dateStart?' → '+fmt(s.dateEnd):'') : '—';
+    const dias   = (s.selectedDates||[]).length||1;
+    const vag    = s.vagas||1;
+    const cob    = s.coberturas||0;
+    const margem = s.payClient&&s.payCollab ? (s.payClient-s.payCollab*vag) : null;
+    const st     = statusLabel[s.status]||'Pendente';
+    const stColor= s.status==='done'?'#3fcf8e':s.status==='partial'?'#00c8f8':'#f0a500';
+    return `<tr>
+      <td style="font-weight:600">${s.client}</td>
+      <td>${s.service||'—'}</td>
+      <td>${per}</td>
+      <td style="text-align:center">${dias}</td>
+      <td>${s.timeStart||'—'} – ${s.timeEnd||'—'}</td>
+      <td style="text-align:center">${escalaMap[s.escala||'todo']||'—'}</td>
+      <td style="text-align:center">${cob}/${vag}</td>
+      <td>${s.supervisor||'—'}</td>
+      <td style="text-align:right;color:#f0a500">${fmtR(s.payCollab)} ${s.payCollabType?'/ '+s.payCollabType:''}</td>
+      <td style="text-align:right;color:#3fcf8e">${fmtR(s.payClient)} ${s.payType?'/ '+s.payType:''}</td>
+      <td style="text-align:right;color:${margem!==null&&margem<0?'#e05c5c':'#3fcf8e'}">${margem!==null?fmtR(margem):'—'}</td>
+      <td style="text-align:center;color:${stColor};font-weight:700">${st}</td>
+    </tr>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/>
+  <title>${titulo}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',Arial,sans-serif;font-size:11px;color:#1a1a2e;background:#fff;padding:20px}
+    h1{font-size:16px;font-weight:700;color:#0a1f3d;margin-bottom:4px}
+    .sub{font-size:10px;color:#6a80a0;margin-bottom:14px}
+    .kpi-row{display:flex;gap:14px;margin-bottom:18px;flex-wrap:wrap}
+    .kpi{background:#f0f4fa;border-radius:8px;padding:10px 16px;min-width:130px}
+    .kpi-val{font-size:15px;font-weight:700;color:#0d3878}
+    .kpi-val.g{color:#1a8c58}.kpi-val.r{color:#c03}
+    .kpi-label{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#6a80a0;margin-top:2px}
+    table{width:100%;border-collapse:collapse;font-size:10px}
+    th{background:#0a1f3d;color:#fff;padding:6px 8px;text-align:left;font-weight:600;letter-spacing:.5px;white-space:nowrap}
+    td{padding:5px 8px;border-bottom:1px solid #e8edf5;vertical-align:top}
+    tr:nth-child(even) td{background:#f7f9fc}
+    tr:hover td{background:#edf2fb}
+    .footer{margin-top:16px;font-size:9px;color:#aaa;text-align:right}
+    @media print{body{padding:10px}tr:hover td{background:inherit}}
+  </style></head><body>
+  <h1>${titulo}</h1>
+  <div class="sub">Gerado em ${new Date().toLocaleString('pt-BR')} · ${list.length} registro(s)</div>
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-val">${list.length}</div><div class="kpi-label">Serviços</div></div>
+    <div class="kpi"><div class="kpi-val g">${list.filter(s=>s.status==='done').length}</div><div class="kpi-label">Completos</div></div>
+    <div class="kpi"><div class="kpi-val" style="color:#f0a500">${list.filter(s=>s.status==='pending').length}</div><div class="kpi-label">Pendentes</div></div>
+    <div class="kpi"><div class="kpi-val g">${fmtR(totalReceita)}</div><div class="kpi-label">Receita Total</div></div>
+    <div class="kpi"><div class="kpi-val r">${fmtR(totalCusto)}</div><div class="kpi-label">Custo Total</div></div>
+    <div class="kpi"><div class="kpi-val ${totalMargem>=0?'g':'r'}">${fmtR(totalMargem)}</div><div class="kpi-label">Margem Est.</div></div>
+  </div>
+  <table>
+    <thead><tr>
+      <th>Cliente</th><th>Serviço</th><th>Período</th><th>Dias</th>
+      <th>Horário</th><th>Escala</th><th>Cob/Vag</th><th>Supervisor</th>
+      <th>Val. Colab.</th><th>Val. Cliente</th><th>Margem</th><th>Status</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div class="footer">PJ Tecnologia e Sistemas · Gestão de Serviços</div>
+  <script>window.onload=()=>{window.print()}<\/script>
+  </body></html>`;
+
+  const win = window.open('','_blank');
+  if(!win){ showToast('Pop-up bloqueado! Permita pop-ups e tente novamente.'); return; }
+  win.document.write(html);
+  win.document.close();
+  showToast('✓ PDF gerado! Imprima ou salve com Ctrl+P / ⌘P');
 }
 
 function toggleFinanceiro(){
