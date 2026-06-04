@@ -2275,18 +2275,40 @@ document.addEventListener('DOMContentLoaded', ()=>{
   calInit();
 
   // Carrega Firebase SDKs dinamicamente e depois inicializa
-  function loadScript(src, cb){
+  let fbLoadTimeout;
+  function loadScript(src, cb, errCb){
     const s = document.createElement('script');
     s.src = src;
     s.onload = cb;
-    s.onerror = () => { fbError = 'Falha ao carregar: '+src; diagLog('err', fbError); diagRefresh(); };
-    document.body.appendChild(s);
+    s.onerror = errCb || (() => {
+      fbError = 'Falha ao carregar SDK (verifique conexão)';
+      diagLog('err', fbError);
+      diagSetDot('err');
+      diagRefresh();
+    });
+    document.head.appendChild(s);
   }
-  loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js', ()=>{
-    loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js', ()=>{
+
+  // Timeout de 12s para o carregamento dos SDKs
+  fbLoadTimeout = setTimeout(() => {
+    if(!fbReady){
+      fbError = 'Timeout ao carregar SDK Firebase';
+      diagLog('err', fbError);
+      diagSetDot('err');
+    }
+  }, 12000);
+
+  loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js', () => {
+    loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js', () => {
+      clearTimeout(fbLoadTimeout);
       initFirebase();
-      if(fbReady) diagLog('ok', 'Firebase + Firestore prontos');
-      else        diagLog('err', 'Falha no init: ' + fbError);
+      if(fbReady){
+        diagLog('ok', 'Firebase + Firestore inicializados');
+        diagSetDot('ok');
+      } else {
+        diagLog('err', 'Falha no init: ' + fbError);
+        diagSetDot('err');
+      }
       diagRefresh();
     });
   });
@@ -2311,13 +2333,8 @@ function diagLog(type, msg){
 
 function diagSetDot(state){
   const dot = document.getElementById('diag-dot');
-  const lbl = document.getElementById('diag-fab-label');
   if(!dot) return;
   dot.className = 'diag-dot ' + state;
-  if(state==='ok')   lbl.textContent = 'Firebase OK';
-  if(state==='warn') lbl.textContent = 'Firebase AVISO';
-  if(state==='err')  lbl.textContent = 'Firebase ERRO';
-  if(state==='')     lbl.textContent = 'Firebase';
 }
 
 function diagVal(id, text, cls){
@@ -2362,12 +2379,17 @@ async function diagRefresh(){
       diagVal('diag-firestore', 'Permissão negada', 'diag-val-warn');
       diagVal('diag-mode', 'Verifique Regras do Firestore', 'diag-val-warn');
       diagSetDot('warn');
-      diagLog('warn', 'permission-denied: configure as regras no Console Firebase');
+      diagLog('warn', 'permission-denied — configure as regras no Console Firebase para: allow read, write: if true;');
+    } else if(e.code === 'unavailable' || e.message?.includes('network')){
+      diagVal('diag-firestore', 'Sem conexão', 'diag-val-err');
+      diagVal('diag-mode', 'Somente localStorage (offline)', 'diag-val-warn');
+      diagSetDot('err');
+      diagLog('err', 'Firestore offline: verifique sua conexão com a internet');
     } else {
-      diagVal('diag-firestore', 'Erro: '+e.code, 'diag-val-err');
+      diagVal('diag-firestore', 'Erro: '+(e.code||e.message?.slice(0,25)), 'diag-val-err');
       diagVal('diag-mode', 'Somente localStorage (fallback)', 'diag-val-warn');
       diagSetDot('err');
-      diagLog('err', 'Firestore: '+e.message);
+      diagLog('err', 'Firestore: ' + (e.code||'') + ' — ' + e.message);
     }
   }
 
