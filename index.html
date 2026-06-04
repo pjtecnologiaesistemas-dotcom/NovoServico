@@ -111,6 +111,13 @@
     .balert-sup-select option{background:#1a0404;color:#ffdddd}
     .balert-sup-select.invalid{border-color:#ff4444;box-shadow:0 0 0 2px rgba(255,68,68,.2)}
     .balert-sup-err{font-family:'Rajdhani',sans-serif;font-size:.6rem;color:#ff8888;margin-top:3px;display:none}
+    .balert-exec-wrap{margin-bottom:8px}
+    .balert-exec-label{font-family:'Rajdhani',sans-serif;font-size:.58rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,220,150,.75);margin-bottom:5px;display:block}
+    .balert-exec-input{width:100%;background:rgba(240,165,0,.08);border:1px solid rgba(240,165,0,.3);border-radius:6px;color:#fff3cc;font-family:'DM Sans',sans-serif;font-size:12.5px;padding:8px 11px;outline:none;transition:border-color .2s}
+    .balert-exec-input:focus{border-color:rgba(240,165,0,.7);box-shadow:0 0 0 2px rgba(240,165,0,.1)}
+    .balert-exec-input::placeholder{color:rgba(240,165,0,.4);opacity:1}
+    .balert-exec-input.invalid{border-color:#ff4444;box-shadow:0 0 0 2px rgba(255,68,68,.2)}
+    .balert-exec-err{font-family:'Rajdhani',sans-serif;font-size:.6rem;color:#ff8888;margin-top:3px;display:none}
     .btn-balert-cover{flex:1;background:rgba(63,207,142,.12);border:1px solid rgba(63,207,142,.28);border-radius:6px;color:var(--success);font-family:'Orbitron',sans-serif;font-size:.52rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:7px 10px;cursor:pointer;transition:all .2s}
     .btn-balert-cover:hover{background:rgba(63,207,142,.22)}
 
@@ -1541,6 +1548,11 @@ function renderBalloon(list){
         </select>
         <div class="balert-sup-err" id="sup-cover-err-${svc.id}">Selecione o supervisor para confirmar</div>
       </div>
+      <div class="balert-exec-wrap">
+        <span class="balert-exec-label">👷 Quem vai realizar a cobertura *</span>
+        <input class="balert-exec-input" id="exec-cover-${svc.id}" type="text" placeholder="Nome do colaborador…" value="${svc.executor||''}" oninput="this.classList.remove('invalid');document.getElementById('exec-cover-err-${svc.id}').style.display='none'"/>
+        <div class="balert-exec-err" id="exec-cover-err-${svc.id}">Informe quem vai realizar a cobertura</div>
+      </div>
       <div class="balert-actions">
         <button class="btn-balert-cover" onclick="quickCover(${svc.id})">✓ Confirmar cobertura</button>
       </div>
@@ -1561,17 +1573,29 @@ function quickCover(id){
     return;
   }
 
+  // Valida executor informado
+  const execInp = document.getElementById('exec-cover-'+id);
+  const execErr = document.getElementById('exec-cover-err-'+id);
+  const execName = execInp ? execInp.value.trim() : '';
+  if(!execName){
+    if(execInp) execInp.classList.add('invalid');
+    if(execErr) execErr.style.display = 'block';
+    return;
+  }
+
   svc.coberturas = (svc.coberturas||0) + 1;
   svc.status = svc.coberturas >= svc.vagas ? 'done' : 'partial';
-  // Registra supervisor da cobertura
+  // Registra supervisor e executor da cobertura
   svc.supervisor = supName;
+  svc.executor   = execName;
   if(!svc.coverDetails) svc.coverDetails = [];
-  svc.coverDetails.push({ supervisor: supName, ts: new Date().toLocaleString('pt-BR') });
+  svc.coverDetails.push({ supervisor: supName, executor: execName, ts: new Date().toLocaleString('pt-BR') });
 
   save();
   saveToFb('servicos', svc);
   updateAlerts();
-  showToast('✓ Cobertura de '+svc.client+' confirmada por '+supName+'!');
+  renderServices && renderServices();
+  showToast('✓ Cobertura de '+svc.client+' confirmada! Executor: '+execName);
   const el = document.getElementById('balert-'+id);
   if(el){
     el.style.transition = 'opacity .25s,transform .25s';
@@ -3045,7 +3069,7 @@ function renderHistorico(){
     const coverHTML = (s.coverDetails||[]).length
       ? `<div class="hist-cover-detail">
           <div class="hist-cover-title">✅ Coberturas registradas</div>
-          ${(s.coverDetails||[]).map(d=>`<div class="hist-cover-item"><span>🎖 ${d.supervisor}</span><span style="margin-left:auto;opacity:.6">${d.ts}</span></div>`).join('')}
+          ${(s.coverDetails||[]).map(d=>`<div class="hist-cover-item"><span>🎖 ${d.supervisor}</span>${d.executor?`<span style="color:var(--cyan2);margin-left:8px">👷 ${d.executor}</span>`:''}<span style="margin-left:auto;opacity:.6">${d.ts}</span></div>`).join('')}
         </div>`
       : '';
     return `
