@@ -130,6 +130,40 @@
     @media(max-width:700px){.grid-4{grid-template-columns:1fr 1fr}}
     @media(max-width:560px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr}}
 
+    /* ── HISTÓRICO KPI ── */
+    .hist-kpi{background:var(--surface2);border:1px solid rgba(0,200,248,.12);border-radius:10px;padding:14px 16px;text-align:center}
+    .hist-kpi-val{font-family:'Orbitron',sans-serif;font-size:1.4rem;font-weight:700;color:var(--cyan2);line-height:1;margin-bottom:4px}
+    .hist-kpi-val.green{color:var(--success)}
+    .hist-kpi-val.amber{color:var(--warn)}
+    .hist-kpi-val.red{color:var(--danger)}
+    .hist-kpi-label{font-family:'Rajdhani',sans-serif;font-size:.6rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+    @media(max-width:700px){#hist-kpis{grid-template-columns:1fr 1fr!important}}
+
+    /* ── HISTÓRICO CARD EXPANDÍVEL ── */
+    .hist-card{background:var(--surface2);border:1px solid rgba(0,200,248,.12);border-radius:12px;overflow:hidden;transition:border-color .2s;animation:fadeSlide .2s ease}
+    .hist-card:hover{border-color:rgba(0,200,248,.3)}
+    .hist-card.status-done{border-left:3px solid var(--success)}
+    .hist-card.status-partial{border-left:3px solid var(--cyan)}
+    .hist-card.status-pending{border-left:3px solid var(--warn)}
+    .hist-card-header{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;user-select:none}
+    .hist-card-header:hover{background:rgba(0,200,248,.03)}
+    .hist-card-chevron{font-size:.75rem;color:var(--muted);transition:transform .2s;flex-shrink:0}
+    .hist-card.expanded .hist-card-chevron{transform:rotate(90deg)}
+    .hist-card-body{display:none;padding:0 14px 14px;border-top:1px solid rgba(0,200,248,.07);padding-top:12px}
+    .hist-card.expanded .hist-card-body{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+    @media(max-width:600px){.hist-card.expanded .hist-card-body{grid-template-columns:1fr 1fr}}
+    @media(max-width:400px){.hist-card.expanded .hist-card-body{grid-template-columns:1fr}}
+    .hist-field{display:flex;flex-direction:column;gap:2px}
+    .hist-label{font-family:'Rajdhani',sans-serif;font-size:.55rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+    .hist-val{font-size:12.5px;color:var(--text);word-break:break-word}
+    .hist-val.green{color:var(--success);font-weight:600}
+    .hist-val.amber{color:var(--warn);font-weight:600}
+    .hist-val.cyan{color:var(--cyan2)}
+    .hist-cover-detail{margin-top:10px;grid-column:1/-1;background:rgba(63,207,142,.04);border:1px solid rgba(63,207,142,.12);border-radius:8px;padding:10px 12px}
+    .hist-cover-title{font-family:'Rajdhani',sans-serif;font-size:.58rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--success);margin-bottom:7px}
+    .hist-cover-item{display:flex;gap:8px;font-size:12px;color:var(--muted);padding:3px 0;border-bottom:1px solid rgba(0,200,248,.05)}
+    .hist-cover-item:last-child{border-bottom:none}
+
     /* ── FIELDS ── */
     .field{display:flex;flex-direction:column;gap:5px}
     label{font-family:'Rajdhani',sans-serif;font-size:.65rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
@@ -473,6 +507,7 @@
 <div class="nav-tabs">
   <div class="nav-tab active" id="tab-form" onclick="switchTab('form')">＋ Novo Serviço</div>
   <div class="nav-tab" id="tab-db" onclick="switchTab('db')">🗄 Banco de Dados</div>
+  <div class="nav-tab" id="tab-hist" onclick="switchTab('hist')">📊 Histórico Consolidado</div>
 </div>
 
 <div class="main-wrap">
@@ -801,7 +836,78 @@
     </div>
   </div><!-- /panel-db -->
 
-</div><!-- /main-wrap -->
+  <!-- PAINEL HISTÓRICO CONSOLIDADO -->
+  <div id="panel-hist" style="display:none">
+    <div class="card" style="border-radius:12px">
+      <div class="section">
+
+        <!-- KPIs -->
+        <div id="hist-kpis" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:22px"></div>
+
+        <!-- FILTROS -->
+        <div style="background:var(--surface2);border:1px solid rgba(0,200,248,.12);border-radius:10px;padding:14px 16px;margin-bottom:18px">
+          <div style="font-family:'Rajdhani',sans-serif;font-size:.62rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);margin-bottom:12px">🔍 Filtros</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px">
+            <div class="field">
+              <label>Cliente</label>
+              <input class="db-search" id="hist-f-client" placeholder="Buscar cliente…" oninput="renderHistorico()" style="max-width:100%"/>
+            </div>
+            <div class="field">
+              <label>Tipo de Serviço</label>
+              <select id="hist-f-type" onchange="renderHistorico()" style="background:var(--surface2);border:1px solid rgba(0,200,248,.12);border-radius:var(--radius);color:var(--white);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 12px;width:100%;outline:none;-webkit-appearance:none">
+                <option value="">Todos</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Status</label>
+              <select id="hist-f-status" onchange="renderHistorico()" style="background:var(--surface2);border:1px solid rgba(0,200,248,.12);border-radius:var(--radius);color:var(--white);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 12px;width:100%;outline:none;-webkit-appearance:none">
+                <option value="">Todos</option>
+                <option value="pending">Pendente</option>
+                <option value="partial">Parcial</option>
+                <option value="done">Completo</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Supervisor</label>
+              <input class="db-search" id="hist-f-sup" placeholder="Buscar supervisor…" oninput="renderHistorico()" style="max-width:100%"/>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;margin-top:10px;align-items:end">
+            <div class="field">
+              <label>Data início (de)</label>
+              <input type="date" id="hist-f-date-from" onchange="renderHistorico()" style="background:var(--surface2);border:1px solid rgba(0,200,248,.12);border-radius:var(--radius);color:var(--white);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 12px;width:100%;outline:none"/>
+            </div>
+            <div class="field">
+              <label>Data início (até)</label>
+              <input type="date" id="hist-f-date-to" onchange="renderHistorico()" style="background:var(--surface2);border:1px solid rgba(0,200,248,.12);border-radius:var(--radius);color:var(--white);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 12px;width:100%;outline:none"/>
+            </div>
+            <div class="field">
+              <label>Ordenar por</label>
+              <select id="hist-f-order" onchange="renderHistorico()" style="background:var(--surface2);border:1px solid rgba(0,200,248,.12);border-radius:var(--radius);color:var(--white);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 12px;width:100%;outline:none;-webkit-appearance:none">
+                <option value="recent">Mais recente</option>
+                <option value="older">Mais antigo</option>
+                <option value="client">Cliente (A-Z)</option>
+                <option value="value">Maior valor</option>
+              </select>
+            </div>
+            <button type="button" onclick="histClearFilters()" style="background:rgba(224,92,92,.08);border:1px solid rgba(224,92,92,.22);border-radius:var(--radius);color:var(--danger);font-family:'Rajdhani',sans-serif;font-size:.68rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;padding:9px 16px;cursor:pointer;white-space:nowrap;transition:all .2s">✕ Limpar</button>
+          </div>
+        </div>
+
+        <!-- TOOLBAR -->
+        <div class="db-toolbar" style="margin-bottom:12px">
+          <span class="db-count" id="hist-count"></span>
+          <div style="display:flex;gap:8px">
+            <button type="button" onclick="histExportCSV()" style="background:rgba(63,207,142,.08);border:1px solid rgba(63,207,142,.22);border-radius:6px;color:var(--success);font-family:'Orbitron',sans-serif;font-size:.5rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:7px 14px;cursor:pointer;transition:all .2s">⬇ CSV</button>
+          </div>
+        </div>
+
+        <!-- LISTA DE CARDS -->
+        <div id="hist-cards-list" style="display:flex;flex-direction:column;gap:12px"></div>
+
+      </div>
+    </div>
+  </div><!-- /panel-hist -->
 
 <!-- MODAL NOVO CLIENTE (via autocomplete) -->
 <div class="modal-overlay" id="modal-cliente">
@@ -1719,9 +1825,12 @@ function showToast(msg){
 function switchTab(tab){
   document.getElementById('panel-form').style.display = tab==='form' ? 'block' : 'none';
   document.getElementById('panel-db').style.display   = tab==='db'   ? 'block' : 'none';
+  document.getElementById('panel-hist').style.display = tab==='hist' ? 'block' : 'none';
   document.getElementById('tab-form').classList.toggle('active', tab==='form');
   document.getElementById('tab-db').classList.toggle('active',   tab==='db');
-  if(tab==='db') renderAll();
+  document.getElementById('tab-hist').classList.toggle('active', tab==='hist');
+  if(tab==='db')   renderAll();
+  if(tab==='hist') renderHistorico();
 }
 
 // ══════════════════════════════════════════
@@ -2311,6 +2420,254 @@ async function diagSyncToFirestore(){
     diagLog('err', 'Sync falhou: '+e.message);
     showToast('Erro no sync: '+e.code);
   }
+}
+
+// ══════════════════════════════════════════
+// HISTÓRICO CONSOLIDADO
+// ══════════════════════════════════════════
+function histGetFiltered(){
+  const qClient = (document.getElementById('hist-f-client')?.value||'').toLowerCase().trim();
+  const qType   = (document.getElementById('hist-f-type')?.value||'');
+  const qStatus = (document.getElementById('hist-f-status')?.value||'');
+  const qSup    = (document.getElementById('hist-f-sup')?.value||'').toLowerCase().trim();
+  const dateFrom= document.getElementById('hist-f-date-from')?.value||'';
+  const dateTo  = document.getElementById('hist-f-date-to')?.value||'';
+  const order   = document.getElementById('hist-f-order')?.value||'recent';
+
+  let list = services.filter(s => {
+    if(qClient && !s.client.toLowerCase().includes(qClient)) return false;
+    if(qType   && s.service !== qType) return false;
+    if(qStatus && s.status !== qStatus) return false;
+    if(qSup){
+      const supMatch = (s.supervisor||'').toLowerCase().includes(qSup) ||
+        (s.coverDetails||[]).some(d => d.supervisor.toLowerCase().includes(qSup));
+      if(!supMatch) return false;
+    }
+    if(dateFrom && s.dateStart && s.dateStart < dateFrom) return false;
+    if(dateTo   && s.dateStart && s.dateStart > dateTo)   return false;
+    return true;
+  });
+
+  list = [...list].sort((a,b)=>{
+    if(order==='recent') return (b.id||0) - (a.id||0);
+    if(order==='older')  return (a.id||0) - (b.id||0);
+    if(order==='client') return a.client.localeCompare(b.client,'pt-BR');
+    if(order==='value')  return (b.payClient||0) - (a.payClient||0);
+    return 0;
+  });
+  return list;
+}
+
+function histPopulateTypeFilter(){
+  const sel = document.getElementById('hist-f-type');
+  if(!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Todos os tipos</option>' +
+    serviceTypes.map(t => `<option value="${t}"${t===cur?' selected':''}>${t}</option>`).join('');
+}
+
+function renderHistorico(){
+  histPopulateTypeFilter();
+  const list = histGetFiltered();
+  const fmt  = d => d ? new Date(d+'T00:00:00').toLocaleDateString('pt-BR') : '—';
+  const fmtR = v => v ? 'R$ '+parseFloat(v).toLocaleString('pt-BR',{minimumFractionDigits:2}) : '—';
+
+  // KPIs (sobre lista filtrada)
+  const total   = list.length;
+  const done    = list.filter(s=>s.status==='done').length;
+  const pending = list.filter(s=>s.status==='pending').length;
+  const receitaTotal = list.reduce((acc,s) => acc + (s.payClient||0), 0);
+  const custoTotal   = list.reduce((acc,s) => acc + ((s.payCollab||0) * (s.vagas||1)), 0);
+
+  document.getElementById('hist-kpis').innerHTML = `
+    <div class="hist-kpi">
+      <div class="hist-kpi-val">${total}</div>
+      <div class="hist-kpi-label">Serviços</div>
+    </div>
+    <div class="hist-kpi">
+      <div class="hist-kpi-val green">${done}</div>
+      <div class="hist-kpi-label">Completos</div>
+    </div>
+    <div class="hist-kpi">
+      <div class="hist-kpi-val amber">${pending}</div>
+      <div class="hist-kpi-label">Pendentes</div>
+    </div>
+    <div class="hist-kpi">
+      <div class="hist-kpi-val">${receitaTotal>0?'R$ '+receitaTotal.toLocaleString('pt-BR',{minimumFractionDigits:2}):'—'}</div>
+      <div class="hist-kpi-label">Receita Total</div>
+    </div>`;
+
+  document.getElementById('hist-count').textContent = list.length + ' registro(s)';
+
+  const container = document.getElementById('hist-cards-list');
+  if(!list.length){
+    container.innerHTML = `<div class="db-empty">Nenhum serviço encontrado com esses filtros</div>`;
+    return;
+  }
+
+  const statusMap = {
+    done:    {label:'Completo', cls:'badge-done'},
+    partial: {label:'Parcial',  cls:'badge-partial'},
+    pending: {label:'Pendente', cls:'badge-pending'},
+  };
+  const escalaMap = {par:'☀️ Par', impar:'🌙 Ímpar', todo:'✅ Todo'};
+
+  container.innerHTML = list.map((s,i) => {
+    const st   = statusMap[s.status]||statusMap.pending;
+    const per  = s.dateStart ? (fmt(s.dateStart) + (s.dateEnd && s.dateEnd!==s.dateStart ? ' → '+fmt(s.dateEnd) : '')) : '—';
+    const dias = (s.selectedDates||[]).length || 1;
+    const cob  = s.coberturas||0;
+    const vag  = s.vagas||1;
+    const margem = s.payClient && s.payCollab
+      ? ((s.payClient - s.payCollab * vag)).toLocaleString('pt-BR',{minimumFractionDigits:2})
+      : null;
+    const coverHTML = (s.coverDetails||[]).length
+      ? `<div class="hist-cover-detail">
+          <div class="hist-cover-title">✅ Coberturas registradas</div>
+          ${(s.coverDetails||[]).map(d=>`<div class="hist-cover-item"><span>🎖 ${d.supervisor}</span><span style="margin-left:auto;opacity:.6">${d.ts}</span></div>`).join('')}
+        </div>`
+      : '';
+    return `
+    <div class="hist-card status-${s.status||'pending'}" id="hcard-${s.id}">
+      <div class="hist-card-header" onclick="histToggleCard(${s.id})">
+        <span class="hist-card-chevron">▶</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-family:'Rajdhani',sans-serif;font-size:.9rem;font-weight:700;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.client}</div>
+          <div style="font-family:'Rajdhani',sans-serif;font-size:.68rem;color:var(--muted);margin-top:1px">${s.service||'—'} · ${per} · ${s.timeStart||'—'}–${s.timeEnd||'—'}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+          <span class="badge-status ${st.cls}">${st.label}</span>
+          ${s.createdAt?`<span style="font-family:'Rajdhani',sans-serif;font-size:.58rem;color:var(--muted)">${s.createdAt}</span>`:''}
+        </div>
+      </div>
+      <div class="hist-card-body">
+        <!-- Cliente -->
+        <div class="hist-field">
+          <div class="hist-label">👤 Cliente</div>
+          <div class="hist-val">${s.client}</div>
+        </div>
+        <div class="hist-field">
+          <div class="hist-label">📞 Contato</div>
+          <div class="hist-val">${s.contact||'—'}${s.phone?' · '+s.phone:''}</div>
+        </div>
+        <div class="hist-field">
+          <div class="hist-label">🏷 Tipo de Serviço</div>
+          <div class="hist-val cyan">${s.service||'—'}</div>
+        </div>
+        <!-- Local e Datas -->
+        <div class="hist-field" style="grid-column:1/-1">
+          <div class="hist-label">📍 Local</div>
+          <div class="hist-val">${s.location||'—'}</div>
+        </div>
+        <div class="hist-field">
+          <div class="hist-label">📅 Período</div>
+          <div class="hist-val">${per}</div>
+        </div>
+        <div class="hist-field">
+          <div class="hist-label">📆 Dias selecionados</div>
+          <div class="hist-val">${dias} dia(s)${dias>1?' ('+((s.selectedDates||[]).map(d=>new Date(d+'T00:00:00').toLocaleDateString('pt-BR')).join(', '))+')':''}</div>
+        </div>
+        <div class="hist-field">
+          <div class="hist-label">⏰ Horário</div>
+          <div class="hist-val">${s.timeStart||'—'} – ${s.timeEnd||'—'}</div>
+        </div>
+        <!-- Equipe -->
+        <div class="hist-field">
+          <div class="hist-label">🔄 Escala</div>
+          <div class="hist-val">${escalaMap[s.escala||'todo']}</div>
+        </div>
+        <div class="hist-field">
+          <div class="hist-label">👥 Vagas / Coberturas</div>
+          <div class="hist-val ${cob>=vag?'green':cob>0?'amber':'red'}">${cob} / ${vag}</div>
+        </div>
+        <div class="hist-field">
+          <div class="hist-label">🎖 Supervisor</div>
+          <div class="hist-val">${s.supervisor||'—'}</div>
+        </div>
+        <!-- Financeiro colaborador -->
+        <div class="hist-field">
+          <div class="hist-label">💼 Valor Colaborador</div>
+          <div class="hist-val amber">${fmtR(s.payCollab)} ${s.payCollabType?'/ '+s.payCollabType:''}</div>
+        </div>
+        <div class="hist-field">
+          <div class="hist-label">📝 Obs. Colaborador</div>
+          <div class="hist-val" style="color:var(--muted)">${s.payObs||'—'}</div>
+        </div>
+        <!-- Financeiro cliente -->
+        <div class="hist-field">
+          <div class="hist-label">💰 Valor Cliente</div>
+          <div class="hist-val green">${fmtR(s.payClient)} ${s.payType?'/ '+s.payType:''}</div>
+        </div>
+        <div class="hist-field">
+          <div class="hist-label">💳 Forma de Pagamento</div>
+          <div class="hist-val">${s.payMethod||'—'}</div>
+        </div>
+        <div class="hist-field">
+          <div class="hist-label">📋 Condição</div>
+          <div class="hist-val">${s.payCond||'—'}</div>
+        </div>
+        ${margem!==null?`<div class="hist-field">
+          <div class="hist-label">📈 Margem estimada</div>
+          <div class="hist-val ${parseFloat(margem.replace(/\./g,'').replace(',','.'))<0?'red':'green'}">R$ ${margem}</div>
+        </div>`:''}
+        ${s.payClientObs?`<div class="hist-field" style="grid-column:1/-1">
+          <div class="hist-label">📝 Obs. Financeira</div>
+          <div class="hist-val" style="color:var(--muted)">${s.payClientObs}</div>
+        </div>`:''}
+        ${s.desc?`<div class="hist-field" style="grid-column:1/-1">
+          <div class="hist-label">📋 Descrição</div>
+          <div class="hist-val" style="color:var(--muted)">${s.desc}</div>
+        </div>`:''}
+        <!-- Coberturas -->
+        ${coverHTML}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function histToggleCard(id){
+  const card = document.getElementById('hcard-'+id);
+  if(!card) return;
+  card.classList.toggle('expanded');
+}
+
+function histClearFilters(){
+  ['hist-f-client','hist-f-sup','hist-f-date-from','hist-f-date-to'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.value='';
+  });
+  ['hist-f-type','hist-f-status','hist-f-order'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el){ el.selectedIndex = 0; }
+  });
+  renderHistorico();
+}
+
+function histExportCSV(){
+  const list = histGetFiltered();
+  if(!list.length){ showToast('Nenhum registro para exportar!'); return; }
+  const fmt  = d => d ? new Date(d+'T00:00:00').toLocaleDateString('pt-BR') : '';
+  const esc  = v => '"'+(String(v||'').replace(/"/g,'""'))+'"';
+  const header = ['ID','Cliente','Contato','Telefone','Tipo de Serviço','Local','Data Início','Data Fim','Dias','Horário Início','Horário Término','Escala','Vagas','Coberturas','Supervisor','Status','Valor Colaborador','Tipo Rem.','Valor Cliente','Forma Pgto','Condição','Margem','Criado em','Descrição'];
+  const rows = list.map(s => {
+    const dias = (s.selectedDates||[]).length || 1;
+    const margem = s.payClient && s.payCollab ? (s.payClient - s.payCollab*(s.vagas||1)).toFixed(2) : '';
+    return [
+      s.id, s.client, s.contact||'', s.phone||'',
+      s.service||'', s.location||'',
+      fmt(s.dateStart), fmt(s.dateEnd), dias,
+      s.timeStart||'', s.timeEnd||'', s.escala||'todo',
+      s.vagas||1, s.coberturas||0, s.supervisor||'', s.status||'pending',
+      s.payCollab||'', s.payCollabType||'',
+      s.payClient||'', s.payMethod||'', s.payCond||'',
+      margem, s.createdAt||'', s.desc||''
+    ].map(esc).join(';');
+  });
+  const csv = '\uFEFF' + [header.map(esc).join(';'), ...rows].join('\r\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'historico_servicos_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  showToast('✓ CSV exportado!');
 }
 
 function toggleFinanceiro(){
