@@ -4,6 +4,12 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>PJ Tecnologia — Novo Serviço</title>
+  <link rel="manifest" href="manifest.json"/>
+  <meta name="theme-color" content="#00c8f8"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="PJ Serviços"/>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@300;400;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -527,6 +533,9 @@
       <button class="bell-btn" id="bell-btn" onclick="toggleBalloon()" title="Alertas de serviços">
         🔔
         <span class="bell-badge" id="bell-badge">0</span>
+      </button>
+      <button class="bell-btn" id="push-btn" onclick="requestPushPermission()" title="Ativar notificações push" style="font-size:1.1rem;display:none">
+        🔕
       </button>
       <button class="diag-fab-inline" id="diag-fab" onclick="toggleDiag()" title="Diagnóstico Firebase">
         <div class="diag-dot" id="diag-dot"></div>
@@ -1966,6 +1975,7 @@ document.getElementById('service-form').addEventListener('submit', function(e){
   save();
   saveToFb('servicos', svc);
   updateAlerts();
+  pushIfUncovered(svc);
   showToast('✓ Serviço lançado com sucesso!');
   resetForm();
 });
@@ -2176,6 +2186,13 @@ function closeServiceTypeModal(){
   editingStIdx = null;
 }
 
+function saveServiceTypesToFb(){
+  if(!fbReady || !db) return;
+  db.collection('serviceTypes').doc('list').set({ items: serviceTypes })
+    .then(() => diagLog('ok', '[sync] serviceTypes salvo'))
+    .catch(e => diagLog('err', '[sync] serviceTypes: ' + e.message));
+}
+
 function saveServiceType(){
   const inp  = document.getElementById('st-name');
   const name = inp.value.trim();
@@ -2195,6 +2212,7 @@ function saveServiceType(){
     showToast('✓ Tipo "'+name+'" adicionado!');
   }
   save();
+  saveServiceTypesToFb();
   renderServiceTypes();
   closeServiceTypeModal();
 }
@@ -2215,6 +2233,7 @@ function deleteServiceType(idx){
   if(!confirm('Excluir o tipo "'+name+'"?')) return;
   serviceTypes.splice(idx, 1);
   save();
+  saveServiceTypesToFb();
   renderServiceTypes();
   showToast('Tipo "'+name+'" excluído.');
 }
@@ -2657,6 +2676,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
       if(fbReady){
         diagLog('ok', 'Firebase + Firestore inicializados');
         diagSetDot('ok');
+        startRealtimeSync();
       } else {
         diagLog('err', 'Falha no init: ' + fbError);
         diagSetDot('err');
@@ -2665,6 +2685,103 @@ document.addEventListener('DOMContentLoaded', ()=>{
     });
   });
 });
+
+/* ════════════════════════════════════════════════════════
+   SINCRONIZAÇÃO EM TEMPO REAL — onSnapshot
+   Substitui o carregamento por localStorage como fonte primária.
+   Quando qualquer documento muda no Firestore (de qualquer
+   dispositivo), o app atualiza automaticamente.
+   ════════════════════════════════════════════════════════ */
+let _unsub = [];   // guarda os listeners para eventual cleanup
+let _syncBanner = null;
+
+function showSyncBanner(msg, type){
+  // Banner discreto no topo da área de conteúdo
+  if(!_syncBanner){
+    _syncBanner = document.createElement('div');
+    _syncBanner.id = 'sync-banner';
+    _syncBanner.style.cssText = `
+      position:fixed;bottom:72px;left:50%;transform:translateX(-50%);
+      background:rgba(0,200,248,.13);border:1px solid rgba(0,200,248,.35);
+      border-radius:8px;padding:7px 18px;font-family:'Rajdhani',sans-serif;
+      font-size:.72rem;font-weight:600;letter-spacing:1px;color:#00eaff;
+      z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;
+      white-space:nowrap;`;
+    document.body.appendChild(_syncBanner);
+  }
+  _syncBanner.textContent = msg;
+  _syncBanner.style.background = type === 'err'
+    ? 'rgba(224,92,92,.13)' : 'rgba(0,200,248,.13)';
+  _syncBanner.style.borderColor = type === 'err'
+    ? 'rgba(224,92,92,.35)' : 'rgba(0,200,248,.35)';
+  _syncBanner.style.color = type === 'err' ? '#ff8888' : '#00eaff';
+  _syncBanner.style.opacity = '1';
+  clearTimeout(_syncBanner._t);
+  _syncBanner._t = setTimeout(() => { _syncBanner.style.opacity = '0'; }, 2500);
+}
+
+function startRealtimeSync(){
+  if(!fbReady || !db) return;
+
+  // ── Serviços ──
+  _unsub.push(
+    db.collection('servicos').onSnapshot(snap => {
+      services = snap.docs.map(d => d.data());
+      save();
+      renderServices();
+      updateAlerts();
+      checkAndPushAlerts && checkAndPushAlerts();
+      diagLog('ok', `[sync] servicos: ${services.length} registro(s)`);
+      showSyncBanner('🔄 Serviços sincronizados');
+    }, err => {
+      diagLog('err', '[sync] servicos: ' + err.message);
+      showSyncBanner('⚠ Erro ao sincronizar serviços', 'err');
+    })
+  );
+
+  // ── Clientes ──
+  _unsub.push(
+    db.collection('clientes').onSnapshot(snap => {
+      clients = snap.docs.map(d => d.data());
+      save();
+      renderClients && renderClients();
+      diagLog('ok', `[sync] clientes: ${clients.length} registro(s)`);
+    }, err => {
+      diagLog('err', '[sync] clientes: ' + err.message);
+    })
+  );
+
+  // ── Supervisores ──
+  _unsub.push(
+    db.collection('supervisores').onSnapshot(snap => {
+      supervisors = snap.docs.map(d => d.data());
+      save();
+      renderSupervisors && renderSupervisors();
+      diagLog('ok', `[sync] supervisores: ${supervisors.length} registro(s)`);
+    }, err => {
+      diagLog('err', '[sync] supervisores: ' + err.message);
+    })
+  );
+
+  // ── Tipos de Serviço ──
+  _unsub.push(
+    db.collection('serviceTypes').onSnapshot(snap => {
+      if(snap.empty) return; // mantém os padrões se ainda não salvou
+      const doc = snap.docs.find(d => d.id === 'list');
+      if(doc && Array.isArray(doc.data().items)){
+        serviceTypes = doc.data().items;
+        save();
+        populateServiceTypeSelect && populateServiceTypeSelect();
+        diagLog('ok', `[sync] serviceTypes: ${serviceTypes.length} tipo(s)`);
+      }
+    }, err => {
+      diagLog('err', '[sync] serviceTypes: ' + err.message);
+    })
+  );
+
+  diagLog('ok', 'Listeners onSnapshot ativos (sync em tempo real)');
+  diagSetDot('ok');
+}
 
 // ══════════════════════════════════════════
 // DIAGNÓSTICO FIREBASE
@@ -3162,6 +3279,127 @@ function toggleDiag(){
   panel.classList.toggle('open');
   if(panel.classList.contains('open')) diagRefresh();
 }
+
+/* ================================================================
+   NOTIFICAÇÕES PUSH — PWA
+   ================================================================ */
+
+let swRegistration = null;
+let pushAlertInterval = null;
+// IDs dos serviços já notificados (evita repetição na mesma sessão)
+let notifiedIds = new Set(JSON.parse(localStorage.getItem('pj_notified_ids') || '[]'));
+
+/* ── 1. Registra o Service Worker ── */
+async function initPWA() {
+  if (!('serviceWorker' in navigator)) return;
+  try {
+    swRegistration = await navigator.serviceWorker.register('sw.js');
+    console.log('[PWA] Service Worker registrado:', swRegistration.scope);
+
+    // Mostra o botão push se a permissão ainda não foi concedida
+    const perm = Notification.permission;
+    const btn = document.getElementById('push-btn');
+    if (perm === 'default') {
+      btn.style.display = 'flex';
+      btn.title = 'Toque para ativar notificações push';
+      btn.textContent = '🔕';
+    } else if (perm === 'granted') {
+      btn.style.display = 'flex';
+      btn.style.opacity = '0.45';
+      btn.title = 'Notificações push ativas ✓';
+      btn.textContent = '🔔';
+      btn.onclick = null;
+      startPushMonitor();
+    }
+  } catch(err) {
+    console.warn('[PWA] Falha ao registrar SW:', err);
+  }
+}
+
+/* ── 2. Pede permissão ao usuário ── */
+async function requestPushPermission() {
+  if (!('Notification' in window)) {
+    showToast('⚠️ Seu navegador não suporta notificações.');
+    return;
+  }
+  const result = await Notification.requestPermission();
+  const btn = document.getElementById('push-btn');
+  if (result === 'granted') {
+    showToast('✓ Notificações push ativadas!');
+    btn.style.opacity = '0.45';
+    btn.title = 'Notificações push ativas ✓';
+    btn.textContent = '🔔';
+    btn.onclick = null;
+    startPushMonitor();
+  } else {
+    showToast('⚠️ Permissão negada. Ative nas configurações do navegador.');
+    btn.title = 'Permissão negada — toque para tentar novamente';
+    btn.textContent = '🔕';
+  }
+}
+
+/* ── 3. Envia notificação via Service Worker ── */
+async function sendPushNotification(title, body, tag) {
+  if (Notification.permission !== 'granted') return;
+  if (!swRegistration) return;
+  try {
+    await swRegistration.active.postMessage({
+      type: 'SHOW_NOTIFICATION',
+      title,
+      body,
+      tag: tag || 'pjtech-alert'
+    });
+  } catch(e) {
+    // Fallback: notificação direto sem SW
+    new Notification(title, { body, icon: 'icon-192.png', tag: tag || 'pjtech-alert' });
+  }
+}
+
+/* ── 4. Monitor periódico — verifica serviços sem cobertura ── */
+function startPushMonitor() {
+  if (pushAlertInterval) return; // já rodando
+  checkAndPushAlerts(); // roda imediatamente
+  // Verifica a cada 30 minutos
+  pushAlertInterval = setInterval(checkAndPushAlerts, 30 * 60 * 1000);
+}
+
+function checkAndPushAlerts() {
+  if (Notification.permission !== 'granted') return;
+  const pendentes = services.filter(s =>
+    (s.coberturas || 0) === 0 &&
+    s.status === 'pending' &&
+    !notifiedIds.has(s.id)
+  );
+  if (!pendentes.length) return;
+
+  // Notifica cada serviço novo
+  pendentes.forEach(s => {
+    const fmt = d => d ? new Date(d+'T00:00:00').toLocaleDateString('pt-BR') : '—';
+    const body = `${s.service || 'Serviço'} — ${s.client}\n📅 ${fmt(s.dateStart)} · ${s.timeStart||''}–${s.timeEnd||''}\n📍 ${s.location||'—'}`;
+    sendPushNotification('🚨 Serviço sem cobertura!', body, 'svc-' + s.id);
+    notifiedIds.add(s.id);
+  });
+
+  // Persiste IDs notificados (limpa os que não existem mais)
+  const validIds = services.map(s => s.id);
+  notifiedIds = new Set([...notifiedIds].filter(id => validIds.includes(id)));
+  localStorage.setItem('pj_notified_ids', JSON.stringify([...notifiedIds]));
+}
+
+/* ── 5. Dispara push imediato ao salvar novo serviço sem cobertura ── */
+function pushIfUncovered(svc) {
+  if (Notification.permission !== 'granted') return;
+  if ((svc.coberturas || 0) === 0 && svc.status === 'pending' && !notifiedIds.has(svc.id)) {
+    const fmt = d => d ? new Date(d+'T00:00:00').toLocaleDateString('pt-BR') : '—';
+    const body = `${svc.service || 'Serviço'} — ${svc.client}\n📅 ${fmt(svc.dateStart)} · ${svc.timeStart||''}–${svc.timeEnd||''}\n📍 ${svc.location||'—'}`;
+    sendPushNotification('🚨 Novo serviço sem cobertura!', body, 'svc-' + svc.id);
+    notifiedIds.add(svc.id);
+    localStorage.setItem('pj_notified_ids', JSON.stringify([...notifiedIds]));
+  }
+}
+
+// Inicia o PWA após carregar
+window.addEventListener('load', () => { initPWA(); });
 </script>
 </body>
 </html>
