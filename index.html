@@ -762,6 +762,11 @@
         </div>
       </div>
       <div class="field" style="margin-top:13px">
+        <label>👷 Nome de quem foi realizar o serviço</label>
+        <input type="text" id="executor-name" placeholder="Ex.: João Silva, Maria Souza…" autocomplete="new-password"/>
+        <span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;color:var(--muted);margin-top:4px;display:block">Pode ser preenchido agora ou editado depois</span>
+      </div>
+      <div class="field" style="margin-top:13px">
         <label>Observações para o colaborador</label>
         <input type="text" id="pay-obs" placeholder="Ex.: Levar EPI, uniforme obrigatório, ponto de encontro…" autocomplete="new-password"/>
       </div>
@@ -1165,6 +1170,11 @@
           <label style="font-family:'Rajdhani',sans-serif;font-size:.6rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);display:block;margin-bottom:6px">Valor Cliente (R$)</label>
           <input type="number" id="edit-pay-client" min="0" step="0.01" placeholder="0,00" style="width:100%;background:var(--surface2);border:1px solid rgba(0,200,248,.18);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:10px 13px;outline:none;transition:border-color .2s" onfocus="this.style.borderColor='var(--cyan)'" onblur="this.style.borderColor='rgba(0,200,248,.18)'"/>
         </div>
+      </div>
+      <!-- Executor -->
+      <div style="margin-bottom:14px">
+        <label style="font-family:'Rajdhani',sans-serif;font-size:.6rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);display:block;margin-bottom:6px">👷 Quem realizou o serviço</label>
+        <input type="text" id="edit-executor" placeholder="Nome de quem foi executar o serviço…" style="width:100%;background:var(--surface2);border:1px solid rgba(0,200,248,.18);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:10px 13px;outline:none;transition:border-color .2s" onfocus="this.style.borderColor='var(--cyan)'" onblur="this.style.borderColor='rgba(0,200,248,.18)'"/>
       </div>
       <!-- Status -->
       <div style="margin-bottom:6px">
@@ -1862,7 +1872,7 @@ function resetForm(){
   ['client-name','client-contact','client-phone',
    'service-location','service-desc',
    'time-start','time-end',
-   'pay-collab','pay-obs','payment-value','payment-obs'
+   'pay-collab','pay-obs','executor-name','payment-value','payment-obs'
   ].forEach(_forceEmpty);
 
   // Limpar GPS
@@ -1896,7 +1906,7 @@ function resetForm(){
     ['client-name','client-contact','client-phone',
      'service-location','service-desc',
      'time-start','time-end',
-     'pay-collab','pay-obs','payment-value','payment-obs'
+     'pay-collab','pay-obs','executor-name','payment-value','payment-obs'
     ].forEach(_forceEmpty);
   });
 }
@@ -1957,6 +1967,7 @@ document.getElementById('service-form').addEventListener('submit', function(e){
     payCollab:    parseFloat(document.getElementById('pay-collab').value)||0,
     payCollabType:document.getElementById('pay-collab-type').value,
     payObs:       document.getElementById('pay-obs').value.trim(),
+    executor:     document.getElementById('executor-name').value.trim(),
     payClient:    parseFloat(document.getElementById('payment-value').value)||0,
     payType:      document.getElementById('payment-type').value,
     payMethod:    document.getElementById('payment-method-sel').value,
@@ -2506,6 +2517,10 @@ function renderServices(){
           <div class="svc-card-label">👤 Colaborador</div>
           <div class="svc-card-val">R$ ${(s.payCollab||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</div>
         </div>
+        <div class="svc-card-field" style="grid-column:1/-1">
+          <div class="svc-card-label">👷 Executor</div>
+          <div class="svc-card-val" style="color:${s.executor?'var(--cyan2)':'var(--muted)'}">${s.executor||'<em style="opacity:.5">Não informado</em>'}</div>
+        </div>
       </div>
       <div class="svc-card-bottom">
         <div style="display:flex;align-items:center;gap:8px">
@@ -2546,6 +2561,10 @@ function viewService(id){
         <div style="color:var(--white);font-weight:600;margin-top:4px;font-size:14px">${s.supervisor||'<span style="color:var(--danger)">Não informado</span>'}</div>
         ${s.supervisorObs?`<div style="margin-top:3px;font-size:12px;color:var(--muted)">${s.supervisorObs}</div>`:''}
       </div>
+      <div style="grid-column:1/-1;background:rgba(0,200,248,.04);border:1px solid rgba(0,200,248,.15);border-radius:8px;padding:10px 14px">
+        <span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--cyan)">👷 Quem realizou o serviço</span>
+        <div style="color:${s.executor?'var(--cyan2)':'var(--muted)'};font-weight:${s.executor?'600':'400'};margin-top:4px;font-size:14px">${s.executor||'Não informado'}</div>
+      </div>
       ${s.desc?`<div style="grid-column:1/-1"><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Descrição</span><div style="margin-top:3px">${s.desc}</div></div>`:''}
     </div>`;
   document.getElementById('modal-service-view').classList.add('open');
@@ -2575,6 +2594,7 @@ function editService(id){
   document.getElementById('edit-pay-collab').value = s.payCollab||0;
   document.getElementById('edit-pay-client').value = s.payClient||0;
   document.getElementById('edit-status').value = s.status||'pending';
+  document.getElementById('edit-executor').value = s.executor||'';
 
   // Escala
   const escVal = s.escala||'todo';
@@ -2628,6 +2648,7 @@ function saveEditService(){
     payCollab: parseFloat(document.getElementById('edit-pay-collab').value)||0,
     payClient: parseFloat(document.getElementById('edit-pay-client').value)||0,
     supervisor: document.getElementById('edit-supervisor').value||'',
+    executor:   document.getElementById('edit-executor').value.trim()||'',
     status: document.getElementById('edit-status').value||'pending',
   };
 
@@ -3084,6 +3105,10 @@ function renderHistorico(){
           <div class="hist-label">🎖 Supervisor</div>
           <div class="hist-val">${s.supervisor||'—'}</div>
         </div>
+        <div class="hist-field">
+          <div class="hist-label">👷 Executor</div>
+          <div class="hist-val ${s.executor?'cyan':''}">${s.executor||'—'}</div>
+        </div>
         <!-- Financeiro colaborador -->
         <div class="hist-field">
           <div class="hist-label">💼 Valor Colaborador</div>
@@ -3205,6 +3230,7 @@ function histExportPDF(){
       <td style="text-align:center">${escalaMap[s.escala||'todo']||'—'}</td>
       <td style="text-align:center">${cob}/${vag}</td>
       <td>${s.supervisor||'—'}</td>
+      <td style="color:#0d6efd;font-weight:${s.executor?'600':'400'}">${s.executor||'—'}</td>
       <td style="text-align:right;color:#f0a500">${fmtR(s.payCollab)} ${s.payCollabType?'/ '+s.payCollabType:''}</td>
       <td style="text-align:right;color:#3fcf8e">${fmtR(s.payClient)} ${s.payType?'/ '+s.payType:''}</td>
       <td style="text-align:right;color:${margem!==null&&margem<0?'#e05c5c':'#3fcf8e'}">${margem!==null?fmtR(margem):'—'}</td>
@@ -3245,7 +3271,7 @@ function histExportPDF(){
   <table>
     <thead><tr>
       <th>Cliente</th><th>Serviço</th><th>Período</th><th>Dias</th>
-      <th>Horário</th><th>Escala</th><th>Cob/Vag</th><th>Supervisor</th>
+      <th>Horário</th><th>Escala</th><th>Cob/Vag</th><th>Supervisor</th><th>Executor</th>
       <th>Val. Colab.</th><th>Val. Cliente</th><th>Margem</th><th>Status</th>
     </tr></thead>
     <tbody>${rows}</tbody>
