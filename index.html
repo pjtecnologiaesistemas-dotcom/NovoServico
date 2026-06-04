@@ -3331,90 +3331,190 @@ function toggleDiag(){
 }
 
 /* ================================================================
-   NOTIFICAÇÕES PUSH — PWA
+   NOTIFICAÇÕES PUSH — PWA  (v30 — robusto Android/iOS)
+   ================================================================
+
+   COMO FUNCIONA:
+   • O Service Worker (sw.js) é registrado na raiz do site.
+   • No Android Chrome: showNotification() via SW — aparece mesmo
+     com o app em segundo plano ou tela bloqueada.
+   • No iOS Safari 16.4+: mesmo fluxo via SW.
+   • Fallback: new Notification() direto, caso SW não esteja ativo.
+   • Monitor periódico a cada 30 min (setInterval) + imediato ao
+     salvar novo serviço sem cobertura.
+   • O botão 🔕 no header fica visível até o usuário conceder permissão.
    ================================================================ */
 
-let swRegistration = null;
+let swRegistration  = null;
 let pushAlertInterval = null;
-// IDs dos serviços já notificados (evita repetição na mesma sessão)
 let notifiedIds = new Set(JSON.parse(localStorage.getItem('pj_notified_ids') || '[]'));
 
-/* ── 1. Registra o Service Worker ── */
+/* ─────────────────────────────────────────────
+   1. REGISTRA O SERVICE WORKER
+   ───────────────────────────────────────────── */
 async function initPWA() {
-  if (!('serviceWorker' in navigator)) return;
-  try {
-    swRegistration = await navigator.serviceWorker.register('sw.js');
-    console.log('[PWA] Service Worker registrado:', swRegistration.scope);
+  _pushUpdateBtn();   // atualiza o botão imediatamente com o estado atual
 
-    // Mostra o botão push se a permissão ainda não foi concedida
-    const perm = Notification.permission;
-    const btn = document.getElementById('push-btn');
-    if (perm === 'default') {
-      btn.style.display = 'flex';
-      btn.title = 'Toque para ativar notificações push';
-      btn.textContent = '🔕';
-    } else if (perm === 'granted') {
-      btn.style.display = 'flex';
-      btn.style.opacity = '0.45';
-      btn.title = 'Notificações push ativas ✓';
-      btn.textContent = '🔔';
-      btn.onclick = null;
-      startPushMonitor();
-    }
-  } catch(err) {
-    console.warn('[PWA] Falha ao registrar SW:', err);
-  }
-}
-
-/* ── 2. Pede permissão ao usuário ── */
-async function requestPushPermission() {
-  if (!('Notification' in window)) {
-    showToast('⚠️ Seu navegador não suporta notificações.');
+  if (!('serviceWorker' in navigator)) {
+    console.warn('[PWA] Service Worker não suportado neste navegador.');
     return;
   }
-  const result = await Notification.requestPermission();
-  const btn = document.getElementById('push-btn');
-  if (result === 'granted') {
-    showToast('✓ Notificações push ativadas!');
-    btn.style.opacity = '0.45';
-    btn.title = 'Notificações push ativas ✓';
-    btn.textContent = '🔔';
-    btn.onclick = null;
-    startPushMonitor();
-  } else {
-    showToast('⚠️ Permissão negada. Ative nas configurações do navegador.');
-    btn.title = 'Permissão negada — toque para tentar novamente';
-    btn.textContent = '🔕';
-  }
-}
 
-/* ── 3. Envia notificação via Service Worker ── */
-async function sendPushNotification(title, body, tag) {
-  if (Notification.permission !== 'granted') return;
-  if (!swRegistration) return;
   try {
-    await swRegistration.active.postMessage({
-      type: 'SHOW_NOTIFICATION',
-      title,
-      body,
-      tag: tag || 'pjtech-alert'
-    });
-  } catch(e) {
-    // Fallback: notificação direto sem SW
-    new Notification(title, { body, icon: 'icon-192.png', tag: tag || 'pjtech-alert' });
+    // Registra o sw.js na raiz do projeto
+    swRegistration = await navigator.serviceWorker.register('./sw.js', { scope: './' });
+    console.log('[PWA] SW registrado — scope:', swRegistration.scope);
+
+    // Aguarda o SW ficar ativo (importante no primeiro carregamento)
+    if (swRegistration.installing) {
+      await new Promise(res => {
+        swRegistration.installing.addEventListener('statechange', e => {
+          if (e.target.state === 'activated') res();
+        });
+      });
+    }
+
+    _pushUpdateBtn();
+
+    // Se já tem permissão, inicia o monitor
+    if (Notification.permission === 'granted') startPushMonitor();
+
+  } catch(err) {
+    console.warn('[PWA] Falha ao registrar SW:', err);
+    _pushUpdateBtn();
   }
 }
 
-/* ── 4. Monitor periódico — verifica serviços sem cobertura ── */
+/* ─────────────────────────────────────────────
+   2. ATUALIZA O BOTÃO PUSH NO HEADER
+   ───────────────────────────────────────────── */
+function _pushUpdateBtn() {
+  const btn = document.getElementById('push-btn');
+  if (!btn) return;
+
+  if (!('Notification' in window)) {
+    btn.style.display = 'none';
+    return;
+  }
+
+  const perm = Notification.permission;
+
+  // Sempre mostra o botão — o estado muda o visual
+  btn.style.display = 'flex';
+
+  if (perm === 'granted') {
+    btn.textContent = '🔔';
+    btn.title = 'Notificações ativas ✓ — toque para testar';
+    btn.style.opacity = '0.55';
+    btn.style.borderColor = 'rgba(63,207,142,.5)';
+    btn.style.color = 'var(--success)';
+    btn.onclick = _pushTestNotification;
+  } else if (perm === 'denied') {
+    btn.textContent = '🔕';
+    btn.title = 'Notificações bloqueadas — ative nas configurações do navegador';
+    btn.style.opacity = '0.4';
+    btn.style.borderColor = 'rgba(224,92,92,.35)';
+    btn.style.color = 'var(--danger)';
+    btn.onclick = () => showToast('⚠️ Notificações bloqueadas. Ative nas configurações do Chrome.');
+  } else {
+    // 'default' — nunca pediu
+    btn.textContent = '🔕';
+    btn.title = 'Toque para ativar notificações push';
+    btn.style.opacity = '1';
+    btn.style.borderColor = 'rgba(240,165,0,.55)';
+    btn.style.color = 'var(--warn)';
+    btn.onclick = requestPushPermission;
+  }
+}
+
+/* ─────────────────────────────────────────────
+   3. PEDE PERMISSÃO AO USUÁRIO
+   ───────────────────────────────────────────── */
+async function requestPushPermission() {
+  if (!('Notification' in window)) {
+    showToast('⚠️ Este navegador não suporta notificações.');
+    return;
+  }
+
+  // iOS Safari exige que a chamada venha de um gesto do usuário — OK aqui
+  const result = await Notification.requestPermission();
+  _pushUpdateBtn();
+
+  if (result === 'granted') {
+    showToast('🔔 Notificações push ativadas!');
+    startPushMonitor();
+    // Envia uma notificação de boas-vindas para confirmar que funciona
+    setTimeout(() => {
+      _pushSend(
+        '🔔 PJ Tecnologia',
+        'Notificações ativas! Você será avisado sobre serviços sem cobertura.',
+        'pjtech-welcome'
+      );
+    }, 800);
+  } else if (result === 'denied') {
+    showToast('⚠️ Permissão negada. Ative nas configurações do Chrome → Site → Notificações.');
+  } else {
+    showToast('⚠️ Permissão não concedida.');
+  }
+}
+
+/* ─────────────────────────────────────────────
+   4. ENVIA NOTIFICAÇÃO  (SW → fallback direto)
+   ───────────────────────────────────────────── */
+async function _pushSend(title, body, tag, data) {
+  if (Notification.permission !== 'granted') return;
+
+  const opts = {
+    body,
+    icon:  'icon-192.png',
+    badge: 'icon-192.png',
+    tag:   tag || 'pjtech-alert',
+    renotify: false,
+    vibrate: [200, 100, 200],
+    data:  data || { url: location.href }
+  };
+
+  // Tenta via Service Worker (funciona em background / tela bloqueada)
+  const reg = swRegistration
+    || (navigator.serviceWorker && await navigator.serviceWorker.ready.catch(() => null));
+
+  if (reg) {
+    try {
+      await reg.showNotification(title, opts);
+      return;
+    } catch(e) {
+      console.warn('[PUSH] showNotification falhou, usando fallback:', e);
+    }
+  }
+
+  // Fallback: notificação direta (só funciona com app aberto)
+  try { new Notification(title, opts); } catch(e) { console.warn('[PUSH] Fallback também falhou:', e); }
+}
+
+/* ─────────────────────────────────────────────
+   5. NOTIFICAÇÃO DE TESTE
+   ───────────────────────────────────────────── */
+async function _pushTestNotification() {
+  await _pushSend(
+    '🔔 PJ Tecnologia — Teste',
+    'Notificações funcionando corretamente ✓',
+    'pjtech-test'
+  );
+  showToast('🔔 Notificação de teste enviada!');
+}
+
+/* ─────────────────────────────────────────────
+   6. MONITOR PERIÓDICO — serviços sem cobertura
+   ───────────────────────────────────────────── */
 function startPushMonitor() {
-  if (pushAlertInterval) return; // já rodando
-  checkAndPushAlerts(); // roda imediatamente
-  // Verifica a cada 30 minutos
-  pushAlertInterval = setInterval(checkAndPushAlerts, 30 * 60 * 1000);
+  if (pushAlertInterval) return;
+  checkAndPushAlerts();                                          // verifica imediatamente
+  pushAlertInterval = setInterval(checkAndPushAlerts, 30 * 60 * 1000); // a cada 30 min
 }
 
 function checkAndPushAlerts() {
   if (Notification.permission !== 'granted') return;
+
   const pendentes = services.filter(s =>
     (s.coberturas || 0) === 0 &&
     s.status === 'pending' &&
@@ -3422,33 +3522,49 @@ function checkAndPushAlerts() {
   );
   if (!pendentes.length) return;
 
-  // Notifica cada serviço novo
+  const fmt = d => d ? new Date(d+'T00:00:00').toLocaleDateString('pt-BR') : '—';
+
+  // Agrupa: se houver mais de 1, envia um resumo + 1 notificação individual por serviço (máx 3)
+  const total = pendentes.length;
+  if (total > 1) {
+    _pushSend(
+      `🚨 ${total} serviços sem cobertura!`,
+      pendentes.slice(0,3).map(s => `• ${s.client} — ${fmt(s.dateStart)}`).join('\n')
+        + (total > 3 ? `\n+ ${total-3} outro(s)…` : ''),
+      'pjtech-multi-alert'
+    );
+  }
+
   pendentes.forEach(s => {
-    const fmt = d => d ? new Date(d+'T00:00:00').toLocaleDateString('pt-BR') : '—';
-    const body = `${s.service || 'Serviço'} — ${s.client}\n📅 ${fmt(s.dateStart)} · ${s.timeStart||''}–${s.timeEnd||''}\n📍 ${s.location||'—'}`;
-    sendPushNotification('🚨 Serviço sem cobertura!', body, 'svc-' + s.id);
+    const body = `${s.service || 'Serviço'} — ${s.client}\n📅 ${fmt(s.dateStart)} · ${s.timeStart||''}–${s.timeEnd||''}\n📍 ${(s.location||'—').slice(0,60)}`;
+    if (total === 1) {
+      _pushSend('🚨 Serviço sem cobertura!', body, 'svc-' + s.id, { url: location.href, svcId: s.id });
+    }
     notifiedIds.add(s.id);
   });
 
-  // Persiste IDs notificados (limpa os que não existem mais)
-  const validIds = services.map(s => s.id);
-  notifiedIds = new Set([...notifiedIds].filter(id => validIds.includes(id)));
+  // Limpa IDs de serviços que não existem mais
+  const validIds = new Set(services.map(s => s.id));
+  notifiedIds = new Set([...notifiedIds].filter(id => validIds.has(id)));
   localStorage.setItem('pj_notified_ids', JSON.stringify([...notifiedIds]));
 }
 
-/* ── 5. Dispara push imediato ao salvar novo serviço sem cobertura ── */
+/* ─────────────────────────────────────────────
+   7. PUSH IMEDIATO ao salvar novo serviço
+   ───────────────────────────────────────────── */
 function pushIfUncovered(svc) {
   if (Notification.permission !== 'granted') return;
-  if ((svc.coberturas || 0) === 0 && svc.status === 'pending' && !notifiedIds.has(svc.id)) {
-    const fmt = d => d ? new Date(d+'T00:00:00').toLocaleDateString('pt-BR') : '—';
-    const body = `${svc.service || 'Serviço'} — ${svc.client}\n📅 ${fmt(svc.dateStart)} · ${svc.timeStart||''}–${svc.timeEnd||''}\n📍 ${svc.location||'—'}`;
-    sendPushNotification('🚨 Novo serviço sem cobertura!', body, 'svc-' + svc.id);
-    notifiedIds.add(svc.id);
-    localStorage.setItem('pj_notified_ids', JSON.stringify([...notifiedIds]));
-  }
+  if ((svc.coberturas || 0) > 0 || svc.status !== 'pending') return;
+  if (notifiedIds.has(svc.id)) return;
+
+  const fmt = d => d ? new Date(d+'T00:00:00').toLocaleDateString('pt-BR') : '—';
+  const body = `${svc.service || 'Serviço'} — ${svc.client}\n📅 ${fmt(svc.dateStart)} · ${svc.timeStart||''}–${svc.timeEnd||''}\n📍 ${(svc.location||'—').slice(0,60)}`;
+  _pushSend('🚨 Novo serviço sem cobertura!', body, 'svc-new-' + svc.id, { url: location.href, svcId: svc.id });
+  notifiedIds.add(svc.id);
+  localStorage.setItem('pj_notified_ids', JSON.stringify([...notifiedIds]));
 }
 
-// Inicia o PWA após carregar
+// Inicia o PWA após o DOM carregar
 window.addEventListener('load', () => { initPWA(); });
 </script>
 </body>
