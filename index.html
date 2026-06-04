@@ -769,11 +769,6 @@
         </div>
       </div>
       <div class="field" style="margin-top:13px">
-        <label>👷 Nome de quem foi realizar o serviço</label>
-        <input type="text" id="executor-name" placeholder="Ex.: João Silva, Maria Souza…" autocomplete="new-password"/>
-        <span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;color:var(--muted);margin-top:4px;display:block">Pode ser preenchido agora ou editado depois</span>
-      </div>
-      <div class="field" style="margin-top:13px">
         <label>Observações para o colaborador</label>
         <input type="text" id="pay-obs" placeholder="Ex.: Levar EPI, uniforme obrigatório, ponto de encontro…" autocomplete="new-password"/>
       </div>
@@ -1896,7 +1891,7 @@ function resetForm(){
   ['client-name','client-contact','client-phone',
    'service-location','service-desc',
    'time-start','time-end',
-   'pay-collab','pay-obs','executor-name','payment-value','payment-obs'
+   'pay-collab','pay-obs','payment-value','payment-obs'
   ].forEach(_forceEmpty);
 
   // Limpar GPS
@@ -1930,7 +1925,7 @@ function resetForm(){
     ['client-name','client-contact','client-phone',
      'service-location','service-desc',
      'time-start','time-end',
-     'pay-collab','pay-obs','executor-name','payment-value','payment-obs'
+     'pay-collab','pay-obs','payment-value','payment-obs'
     ].forEach(_forceEmpty);
   });
 }
@@ -1991,7 +1986,7 @@ document.getElementById('service-form').addEventListener('submit', function(e){
     payCollab:    parseFloat(document.getElementById('pay-collab').value)||0,
     payCollabType:document.getElementById('pay-collab-type').value,
     payObs:       document.getElementById('pay-obs').value.trim(),
-    executor:     document.getElementById('executor-name').value.trim(),
+    executor:     '',
     payClient:    parseFloat(document.getElementById('payment-value').value)||0,
     payType:      document.getElementById('payment-type').value,
     payMethod:    document.getElementById('payment-method-sel').value,
