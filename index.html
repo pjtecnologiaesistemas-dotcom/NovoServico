@@ -392,14 +392,14 @@
     #modal-supervisor .modal-box,#modal-service-view .modal-box{max-width:540px}
 
     /* ── PAINEL DIAGNÓSTICO FIREBASE ── */
-    .diag-fab{position:fixed;bottom:90px;right:24px;z-index:500;background:var(--surface);border:1px solid rgba(0,200,248,.25);border-radius:50px;padding:8px 16px 8px 12px;display:flex;align-items:center;gap:8px;cursor:pointer;box-shadow:0 4px 24px rgba(0,0,0,.5);transition:all .2s;font-family:'Rajdhani',sans-serif;font-size:.68rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
-    .diag-fab:hover{border-color:var(--cyan);color:var(--cyan);box-shadow:0 4px 32px rgba(0,200,248,.2)}
-    .diag-dot{width:9px;height:9px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:background .3s}
+    .diag-fab-inline{position:relative;background:none;border:1px solid rgba(0,200,248,.2);border-radius:8px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;flex-shrink:0}
+    .diag-fab-inline:hover{border-color:var(--cyan);background:rgba(0,200,248,.06)}
+    .diag-dot{width:10px;height:10px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:background .3s}
     .diag-dot.ok{background:var(--success);box-shadow:0 0 8px var(--success)}
     .diag-dot.warn{background:var(--warn);box-shadow:0 0 8px var(--warn);animation:diagPulse 1.2s ease-in-out infinite}
     .diag-dot.err{background:var(--danger);box-shadow:0 0 8px var(--danger);animation:diagPulse .8s ease-in-out infinite}
     @keyframes diagPulse{0%,100%{opacity:1}50%{opacity:.4}}
-    .diag-panel{position:fixed;bottom:148px;right:24px;width:360px;max-width:calc(100vw - 32px);background:linear-gradient(160deg,#071426 0%,#050d1a 100%);border:1.5px solid rgba(0,200,248,.22);border-radius:14px;box-shadow:0 8px 48px rgba(0,0,0,.7);z-index:499;display:none;flex-direction:column;overflow:hidden;animation:balloonPop .25s cubic-bezier(.34,1.56,.64,1);transform-origin:bottom right}
+    .diag-panel{position:fixed;top:72px;right:24px;width:360px;max-width:calc(100vw - 32px);background:linear-gradient(160deg,#071426 0%,#050d1a 100%);border:1.5px solid rgba(0,200,248,.22);border-radius:14px;box-shadow:0 8px 48px rgba(0,0,0,.7);z-index:499;display:none;flex-direction:column;overflow:hidden;animation:balloonPop .25s cubic-bezier(.34,1.56,.64,1);transform-origin:top right}
     .diag-panel.open{display:flex}
     .diag-panel-header{background:linear-gradient(90deg,rgba(0,200,248,.1) 0%,rgba(0,200,248,.03) 100%);border-bottom:1px solid rgba(0,200,248,.15);padding:13px 16px;display:flex;align-items:center;gap:10px}
     .diag-panel-icon{font-size:1rem;line-height:1;flex-shrink:0}
@@ -478,12 +478,14 @@
     </a>
     <div class="header-divider-v"></div>
     <div class="header-tagline"><strong>Inovação que conecta.</strong><br/>Tecnologia que transforma.</div>
-    <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
       <button class="bell-btn" id="bell-btn" onclick="toggleBalloon()" title="Alertas de serviços">
         🔔
         <span class="bell-badge" id="bell-badge">0</span>
       </button>
-      <div class="header-badge">Novo Serviço</div>
+      <button class="diag-fab-inline" id="diag-fab" onclick="toggleDiag()" title="Diagnóstico Firebase">
+        <div class="diag-dot" id="diag-dot"></div>
+      </button>
     </div>
   </div>
 </header>
@@ -1030,11 +1032,7 @@
   </div>
 </div>
 
-<!-- DIAGNÓSTICO FIREBASE FAB -->
-<button class="diag-fab" id="diag-fab" onclick="toggleDiag()" title="Diagnóstico Firebase">
-  <div class="diag-dot" id="diag-dot"></div>
-  <span id="diag-fab-label">Firebase</span>
-</button>
+<!-- DIAGNÓSTICO FIREBASE FAB removido — botão integrado ao header -->
 
 <!-- PAINEL DIAGNÓSTICO -->
 <div class="diag-panel" id="diag-panel">
