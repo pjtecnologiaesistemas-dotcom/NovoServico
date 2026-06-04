@@ -2572,10 +2572,14 @@ function editService(id){
   supervisors.forEach(sv=>{ const o=document.createElement('option'); o.value=sv.name; o.textContent=sv.name; if(sv.name===s.supervisor) o.selected=true; supSel.appendChild(o); });
 
   document.getElementById('modal-service-edit').classList.add('open');
+  document.querySelector('.nav-tabs').style.visibility = 'hidden';
+  document.querySelector('.site-header').style.visibility = 'hidden';
 }
 
 function closeEditServiceModal(){
   document.getElementById('modal-service-edit').classList.remove('open');
+  document.querySelector('.nav-tabs').style.visibility = '';
+  document.querySelector('.site-header').style.visibility = '';
 }
 
 function saveEditService(){
