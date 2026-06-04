@@ -461,12 +461,15 @@
     .btn-gps.loading{animation:gpsSpin 1s linear infinite;border-color:var(--warn);color:var(--warn)}
     .btn-gps.ok{border-color:var(--success);color:var(--success);background:rgba(63,207,142,.1)}
     @keyframes gpsSpin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+    .btn-paste-coords{background:rgba(240,165,0,.07);border:1px solid rgba(240,165,0,.22);border-radius:var(--radius);color:var(--warn);font-size:.7rem;height:42px;min-width:42px;padding:0 10px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;transition:all .2s;flex-shrink:0;font-family:'Rajdhani',sans-serif;font-weight:700;letter-spacing:1px;white-space:nowrap}
+    .btn-paste-coords:hover{background:rgba(240,165,0,.16);border-color:var(--warn);box-shadow:0 0 10px rgba(240,165,0,.15)}
     .loc-coords{display:none;margin-top:4px;font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:1px;color:var(--success);align-items:center;gap:6px}
     .loc-coords.visible{display:flex}
     .loc-coords a{color:var(--cyan2);text-decoration:none;display:inline-flex;align-items:center;gap:3px;border:1px solid rgba(0,200,248,.2);border-radius:4px;padding:2px 8px;transition:all .15s}
     .loc-coords a:hover{background:rgba(0,200,248,.1);border-color:var(--cyan)}
     .map-link-inline{display:inline-flex;align-items:center;gap:4px;font-family:'Rajdhani',sans-serif;font-size:.62rem;font-weight:600;letter-spacing:1px;color:var(--cyan2);text-decoration:none;background:rgba(0,200,248,.08);border:1px solid rgba(0,200,248,.2);border-radius:5px;padding:3px 9px;transition:all .15s;white-space:nowrap}
     .map-link-inline:hover{background:rgba(0,200,248,.18);border-color:var(--cyan)}
+    .loc-hint{font-family:'Rajdhani',sans-serif;font-size:.6rem;color:var(--muted);margin-top:3px;opacity:.7}
 
     /* ── FOOTER ── */
     .site-footer{position:relative;z-index:1;width:100%;border-top:1px solid rgba(0,200,248,.1);background:linear-gradient(180deg,rgba(5,13,26,0) 0%,rgba(5,13,26,.98) 100%);margin-top:auto}
@@ -598,9 +601,11 @@
         <div class="field">
           <label>Local de execução <span class="req">*</span></label>
           <div class="loc-wrap">
-            <input type="text" id="service-location" placeholder="Endereço completo" required autocomplete="new-password"/>
+            <input type="text" id="service-location" placeholder="Endereço ou cole as coordenadas ex: -22.4425,-46.9193" required autocomplete="new-password" oninput="detectCoords(this)"/>
             <button type="button" class="btn-gps" id="btn-gps" onclick="getMyLocation()" title="Capturar minha localização GPS">📍</button>
+            <button type="button" class="btn-paste-coords" id="btn-paste" onclick="pasteCoords()" title="Colar coordenadas do Google Maps">📋 Colar</button>
           </div>
+          <div class="loc-hint">💡 Cole coordenadas do Google Maps (ex: <strong>-22.4425,-46.9193</strong>) ou use o GPS 📍</div>
           <div class="loc-coords" id="loc-coords">
             <span>📡</span>
             <span id="loc-coords-txt"></span>
@@ -1869,26 +1874,81 @@ document.querySelectorAll('input,select').forEach(el => {
 // ══════════════════════════════════════════
 // GEOLOCALIZAÇÃO GPS
 // ══════════════════════════════════════════
+
+// Detecta se o valor digitado/colado no campo é um par de coordenadas
+function detectCoords(input){
+  const val = input.value.trim();
+  // Aceita formatos: "-22.4425,-46.9193" ou "-22.4425, -46.9193"
+  const match = val.match(/^(-?\d{1,3}\.\d+)[,\s]+(-?\d{1,3}\.\d+)$/);
+  if(match){
+    const lat = parseFloat(match[1]);
+    const lng = parseFloat(match[2]);
+    // Valida range geográfico
+    if(lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180){
+      _applyCoords(lat.toFixed(6), lng.toFixed(6));
+    }
+  } else {
+    // Se o usuário editou e não é mais coords, limpa os campos ocultos mas mantém badge se já tinha
+    const latEl = document.getElementById('location-lat');
+    const lngEl = document.getElementById('location-lng');
+    if(latEl && lngEl && !val.match(/^-?\d{1,3}\.\d/)){
+      latEl.value = ''; lngEl.value = '';
+      document.getElementById('loc-coords').classList.remove('visible');
+      const btn = document.getElementById('btn-gps');
+      if(btn){ btn.classList.remove('ok'); btn.textContent = '📍'; }
+    }
+  }
+}
+
+// Aplica coordenadas nos campos e mostra badge com link
+function _applyCoords(lat, lng){
+  document.getElementById('location-lat').value = lat;
+  document.getElementById('location-lng').value = lng;
+  const mapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
+  const mapLink = document.getElementById('loc-map-link');
+  const coordsTxt = document.getElementById('loc-coords-txt');
+  const coordsEl = document.getElementById('loc-coords');
+  if(mapLink) mapLink.href = mapsUrl;
+  if(coordsTxt) coordsTxt.textContent = `${lat}, ${lng}`;
+  if(coordsEl) coordsEl.classList.add('visible');
+  const btn = document.getElementById('btn-gps');
+  if(btn){ btn.classList.remove('loading'); btn.classList.add('ok'); btn.textContent = '✅'; }
+}
+
+// Colar coordenadas via clipboard (botão 📋)
+async function pasteCoords(){
+  try {
+    const text = await navigator.clipboard.readText();
+    const val  = text.trim();
+    const match = val.match(/(-?\d{1,3}\.\d+)[,\s]+(-?\d{1,3}\.\d+)/);
+    if(match){
+      const lat = parseFloat(match[1]);
+      const lng = parseFloat(match[2]);
+      if(lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180){
+        document.getElementById('service-location').value = `${lat.toFixed(6)},${lng.toFixed(6)}`;
+        _applyCoords(lat.toFixed(6), lng.toFixed(6));
+        showToast('✓ Coordenadas coladas com sucesso!');
+        return;
+      }
+    }
+    // Se não encontrou coords, cola o texto normalmente no campo
+    document.getElementById('service-location').value = val;
+    showToast('Texto colado. Não eram coordenadas.');
+  } catch(e) {
+    showToast('⚠ Permita acesso à área de transferência ou cole manualmente.');
+  }
+}
+
 function getMyLocation(){
   if(!navigator.geolocation){ showToast('⚠ Geolocalização não suportada neste navegador.'); return; }
   const btn = document.getElementById('btn-gps');
-  const coordsEl = document.getElementById('loc-coords');
-  const coordsTxt = document.getElementById('loc-coords-txt');
-  const mapLink = document.getElementById('loc-map-link');
   btn.classList.add('loading'); btn.textContent = '🔄';
   showToast('Buscando localização GPS…');
   navigator.geolocation.getCurrentPosition(
     async (pos) => {
       const lat = pos.coords.latitude.toFixed(6);
       const lng = pos.coords.longitude.toFixed(6);
-      document.getElementById('location-lat').value = lat;
-      document.getElementById('location-lng').value = lng;
-      const mapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
-      mapLink.href = mapsUrl;
-      coordsTxt.textContent = `${lat}, ${lng}`;
-      coordsEl.classList.add('visible');
-      btn.classList.remove('loading'); btn.classList.add('ok'); btn.textContent = '✅';
-      // Reverse geocoding com Nominatim (gratuito, sem chave)
+      _applyCoords(lat, lng);
       try {
         const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`, {
           headers: { 'Accept-Language': 'pt-BR' }
@@ -1898,11 +1958,11 @@ function getMyLocation(){
           document.getElementById('service-location').value = data.display_name;
           showToast('✓ Localização capturada!');
         } else {
-          document.getElementById('service-location').value = `${lat}, ${lng}`;
+          document.getElementById('service-location').value = `${lat},${lng}`;
           showToast('✓ Coordenadas capturadas!');
         }
       } catch(e) {
-        document.getElementById('service-location').value = `${lat}, ${lng}`;
+        document.getElementById('service-location').value = `${lat},${lng}`;
         showToast('✓ Coordenadas capturadas (sem endereço)');
       }
     },
