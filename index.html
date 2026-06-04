@@ -453,6 +453,21 @@
     .diag-btn.warn-btn{background:rgba(240,165,0,.07);border-color:rgba(240,165,0,.2);color:var(--warn)}
     .diag-btn.warn-btn:hover{background:rgba(240,165,0,.15)}
 
+    /* ── GPS LOCATION ── */
+    .loc-wrap{position:relative;display:flex;gap:6px;align-items:flex-start}
+    .loc-wrap input{flex:1}
+    .btn-gps{background:rgba(0,200,248,.08);border:1px solid rgba(0,200,248,.22);border-radius:var(--radius);color:var(--cyan);font-size:.85rem;width:42px;height:42px;min-width:42px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0;position:relative;top:0}
+    .btn-gps:hover{background:rgba(0,200,248,.2);border-color:var(--cyan);box-shadow:0 0 12px rgba(0,200,248,.2)}
+    .btn-gps.loading{animation:gpsSpin 1s linear infinite;border-color:var(--warn);color:var(--warn)}
+    .btn-gps.ok{border-color:var(--success);color:var(--success);background:rgba(63,207,142,.1)}
+    @keyframes gpsSpin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+    .loc-coords{display:none;margin-top:4px;font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:1px;color:var(--success);align-items:center;gap:6px}
+    .loc-coords.visible{display:flex}
+    .loc-coords a{color:var(--cyan2);text-decoration:none;display:inline-flex;align-items:center;gap:3px;border:1px solid rgba(0,200,248,.2);border-radius:4px;padding:2px 8px;transition:all .15s}
+    .loc-coords a:hover{background:rgba(0,200,248,.1);border-color:var(--cyan)}
+    .map-link-inline{display:inline-flex;align-items:center;gap:4px;font-family:'Rajdhani',sans-serif;font-size:.62rem;font-weight:600;letter-spacing:1px;color:var(--cyan2);text-decoration:none;background:rgba(0,200,248,.08);border:1px solid rgba(0,200,248,.2);border-radius:5px;padding:3px 9px;transition:all .15s;white-space:nowrap}
+    .map-link-inline:hover{background:rgba(0,200,248,.18);border-color:var(--cyan)}
+
     /* ── FOOTER ── */
     .site-footer{position:relative;z-index:1;width:100%;border-top:1px solid rgba(0,200,248,.1);background:linear-gradient(180deg,rgba(5,13,26,0) 0%,rgba(5,13,26,.98) 100%);margin-top:auto}
     .footer-line{width:100%;height:2px;background:linear-gradient(90deg,transparent,rgba(0,200,248,.15) 20%,rgba(0,200,248,.28) 50%,rgba(0,200,248,.15) 80%,transparent)}
@@ -582,7 +597,17 @@
         </div>
         <div class="field">
           <label>Local de execução <span class="req">*</span></label>
-          <input type="text" id="service-location" placeholder="Endereço completo" required autocomplete="new-password"/>
+          <div class="loc-wrap">
+            <input type="text" id="service-location" placeholder="Endereço completo" required autocomplete="new-password"/>
+            <button type="button" class="btn-gps" id="btn-gps" onclick="getMyLocation()" title="Capturar minha localização GPS">📍</button>
+          </div>
+          <div class="loc-coords" id="loc-coords">
+            <span>📡</span>
+            <span id="loc-coords-txt"></span>
+            <a id="loc-map-link" href="#" target="_blank">🗺 Ver no Mapa</a>
+          </div>
+          <input type="hidden" id="location-lat"/>
+          <input type="hidden" id="location-lng"/>
           <span class="field-error" id="err-location">Campo obrigatório</span>
         </div>
       </div>
@@ -1717,6 +1742,13 @@ function resetForm(){
    'time-start','time-end',
    'pay-collab','pay-obs','payment-value','payment-obs'
   ].forEach(_forceEmpty);
+
+  // Limpar GPS
+  document.getElementById('location-lat').value = '';
+  document.getElementById('location-lng').value = '';
+  document.getElementById('loc-coords').classList.remove('visible');
+  const gpsBtn = document.getElementById('btn-gps');
+  gpsBtn.classList.remove('ok','loading'); gpsBtn.textContent = '📍';
   ['pay-collab-type','payment-type','payment-method-sel','service-name'].forEach(_forceSelect);
 
   const vagasEl = document.getElementById('vagas');
@@ -1790,6 +1822,8 @@ document.getElementById('service-form').addEventListener('submit', function(e){
     phone:        document.getElementById('client-phone').value.trim(),
     service:      document.getElementById('service-name').value.trim(),
     location:     document.getElementById('service-location').value.trim(),
+    locationLat:  document.getElementById('location-lat').value || null,
+    locationLng:  document.getElementById('location-lng').value || null,
     desc:         document.getElementById('service-desc').value.trim(),
     dateStart:    calSelectedDates[0] || '',
     dateEnd:      calSelectedDates[calSelectedDates.length-1] || '',
@@ -1833,8 +1867,55 @@ document.querySelectorAll('input,select').forEach(el => {
 });
 
 // ══════════════════════════════════════════
-// TOAST
+// GEOLOCALIZAÇÃO GPS
 // ══════════════════════════════════════════
+function getMyLocation(){
+  if(!navigator.geolocation){ showToast('⚠ Geolocalização não suportada neste navegador.'); return; }
+  const btn = document.getElementById('btn-gps');
+  const coordsEl = document.getElementById('loc-coords');
+  const coordsTxt = document.getElementById('loc-coords-txt');
+  const mapLink = document.getElementById('loc-map-link');
+  btn.classList.add('loading'); btn.textContent = '🔄';
+  showToast('Buscando localização GPS…');
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
+      const lat = pos.coords.latitude.toFixed(6);
+      const lng = pos.coords.longitude.toFixed(6);
+      document.getElementById('location-lat').value = lat;
+      document.getElementById('location-lng').value = lng;
+      const mapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
+      mapLink.href = mapsUrl;
+      coordsTxt.textContent = `${lat}, ${lng}`;
+      coordsEl.classList.add('visible');
+      btn.classList.remove('loading'); btn.classList.add('ok'); btn.textContent = '✅';
+      // Reverse geocoding com Nominatim (gratuito, sem chave)
+      try {
+        const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`, {
+          headers: { 'Accept-Language': 'pt-BR' }
+        });
+        const data = await resp.json();
+        if(data && data.display_name){
+          document.getElementById('service-location').value = data.display_name;
+          showToast('✓ Localização capturada!');
+        } else {
+          document.getElementById('service-location').value = `${lat}, ${lng}`;
+          showToast('✓ Coordenadas capturadas!');
+        }
+      } catch(e) {
+        document.getElementById('service-location').value = `${lat}, ${lng}`;
+        showToast('✓ Coordenadas capturadas (sem endereço)');
+      }
+    },
+    (err) => {
+      btn.classList.remove('loading'); btn.textContent = '📍';
+      const msgs = { 1:'Permissão negada. Permita o acesso à localização.', 2:'Localização indisponível no momento.', 3:'Tempo esgotado ao buscar localização.' };
+      showToast('⚠ ' + (msgs[err.code] || 'Erro ao obter localização.'));
+    },
+    { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+  );
+}
+
+
 function showToast(msg){
   const t = document.getElementById('toast');
   t.textContent = msg; t.style.display = 'block';
@@ -2220,7 +2301,7 @@ function renderServices(){
       <div class="svc-card-body">
         <div class="svc-card-field" style="grid-column:1/-1">
           <div class="svc-card-label">📍 Local</div>
-          <div class="svc-card-val svc-card-loc" title="${s.location||''}">${s.location||'—'}</div>
+          <div class="svc-card-val svc-card-loc" title="${s.location||''}">${s.location||'—'}${s.locationLat&&s.locationLng?` <a class="map-link-inline" href="https://www.google.com/maps?q=${s.locationLat},${s.locationLng}" target="_blank">🗺 Mapa</a>`:''}</div>
         </div>
         <div class="svc-card-field">
           <div class="svc-card-label">📅 Período</div>
@@ -2264,7 +2345,7 @@ function viewService(id){
       <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Cliente</span><div style="color:var(--white);font-weight:600;margin-top:3px">${s.client}</div></div>
       <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">CNPJ/CPF</span><div style="margin-top:3px">${s.clientDoc||'—'}</div></div>
       <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Serviço</span><div style="color:var(--white);margin-top:3px">${s.service||'—'}</div></div>
-      <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Local</span><div style="margin-top:3px">${s.location||'—'}</div></div>
+      <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Local</span><div style="margin-top:3px">${s.location||'—'}${s.locationLat&&s.locationLng?` <a class="map-link-inline" style="margin-top:5px" href="https://www.google.com/maps?q=${s.locationLat},${s.locationLng}" target="_blank">🗺 Ver no Google Maps</a>`:''}</div></div>
       <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Período</span><div style="margin-top:3px">${fmt(s.dateStart)} → ${fmt(s.dateEnd)}</div></div>
       <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Horário</span><div style="margin-top:3px">${s.timeStart||'—'} – ${s.timeEnd||'—'}</div></div>
       <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Escala de Rodízio</span><div style="margin-top:4px">${(()=>{const m={par:{label:'Par',icon:'☀️',color:'var(--cyan2)'},impar:{label:'Ímpar',icon:'🌙',color:'var(--warn)'},todo:{label:'Todo',icon:'✅',color:'var(--success)'}};const e=m[s.escala||'todo'];return `<span style="font-weight:700;color:${e.color}">${e.icon} ${e.label}</span>`;})()}</div></div>
@@ -2613,7 +2694,7 @@ function renderHistorico(){
         <!-- Local e Datas -->
         <div class="hist-field" style="grid-column:1/-1">
           <div class="hist-label">📍 Local</div>
-          <div class="hist-val">${s.location||'—'}</div>
+          <div class="hist-val">${s.location||'—'}${s.locationLat&&s.locationLng?` <a class="map-link-inline" href="https://www.google.com/maps?q=${s.locationLat},${s.locationLng}" target="_blank">🗺 Ver no Mapa</a>`:''}</div>
         </div>
         <div class="hist-field">
           <div class="hist-label">📅 Período</div>
