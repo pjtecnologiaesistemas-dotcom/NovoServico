@@ -3373,19 +3373,24 @@ let notifiedIds = new Set();
    1. REGISTRA O SERVICE WORKER
    ───────────────────────────────────────────── */
 async function initPWA() {
-  _pushUpdateBtn();   // atualiza o botão imediatamente com o estado atual
+  _pushUpdateBtn();
 
   if (!('serviceWorker' in navigator)) {
-    console.warn('[PWA] Service Worker não suportado neste navegador.');
+    console.warn('[PWA] Service Worker não suportado.');
     return;
   }
 
   try {
-    // Registra o sw.js na raiz do projeto
+    // Registra o SW principal (sw.js) — contém Firebase Messaging integrado
     swRegistration = await navigator.serviceWorker.register('./sw.js', { scope: './' });
     console.log('[PWA] SW registrado — scope:', swRegistration.scope);
 
-    // Aguarda o SW ficar ativo (importante no primeiro carregamento)
+    // Força ativação imediata sem esperar fechar abas
+    if (swRegistration.waiting) {
+      swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+    }
+
+    // Aguarda o SW ficar ativo no primeiro carregamento
     if (swRegistration.installing) {
       await new Promise(res => {
         swRegistration.installing.addEventListener('statechange', e => {
@@ -3394,15 +3399,44 @@ async function initPWA() {
       });
     }
 
+    // Garante que o firebase-messaging-sw.js também está registrado (FCM exige)
+    try {
+      await navigator.serviceWorker.register('./firebase-messaging-sw.js', { scope: './' });
+      console.log('[PWA] firebase-messaging-sw.js registrado');
+    } catch(e) {
+      console.warn('[PWA] firebase-messaging-sw.js não encontrado (ok se sw.js já tem FCM):', e.message);
+    }
+
     _pushUpdateBtn();
 
-    // Se já tem permissão, inicia o monitor
-    if (Notification.permission === 'granted') startPushMonitor();
+    if (Notification.permission === 'granted') {
+      startPushMonitor();
+      _swKeepAlive(); // mantém o SW acordado para receber notificações
+      // Reinicia o FCM token caso tenha expirado ou app foi reinstalado
+      setTimeout(() => initFCM(), 1500);
+    }
 
   } catch(err) {
     console.warn('[PWA] Falha ao registrar SW:', err);
     _pushUpdateBtn();
   }
+}
+
+/* ─── Keep-alive: pinga o SW a cada 10s — mais agressivo para Android não matar ─── */
+function _swKeepAlive() {
+  if (!('serviceWorker' in navigator)) return;
+  setInterval(async () => {
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      if (!reg || !reg.active) {
+        // SW morreu — tenta reregistrar
+        swRegistration = await navigator.serviceWorker.register('./sw.js', { scope: './' });
+        return;
+      }
+      const mc = new MessageChannel();
+      reg.active.postMessage({ type: 'SW_PING' }, [mc.port2]);
+    } catch(e) { /* silencioso */ }
+  }, 10000); // a cada 10 segundos
 }
 
 /* ─────────────────────────────────────────────
@@ -3463,6 +3497,9 @@ async function requestPushPermission() {
   if (result === 'granted') {
     showToast('🔔 Notificações push ativadas!');
     startPushMonitor();
+    _swKeepAlive();
+    // Registra token FCM imediatamente após permissão concedida
+    setTimeout(() => initFCM(), 500);
     // Envia uma notificação de boas-vindas para confirmar que funciona
     setTimeout(() => {
       _pushSend(
@@ -3470,7 +3507,7 @@ async function requestPushPermission() {
         'Notificações ativas! Você será avisado sobre serviços sem cobertura.',
         'pjtech-welcome'
       );
-    }, 800);
+    }, 1200);
   } else if (result === 'denied') {
     showToast('⚠️ Permissão negada. Ative nas configurações do Chrome → Site → Notificações.');
   } else {
@@ -3486,11 +3523,17 @@ async function _pushSend(title, body, tag, data) {
 
   const opts = {
     body,
-    icon:  'icon-192.png',
-    badge: 'icon-192.png',
-    tag:   tag || 'pjtech-alert',
-    renotify: false,
-    vibrate: [200, 100, 200],
+    icon:             'icon-192.png',
+    badge:            'icon-192.png',
+    tag:              tag || 'pjtech-alert',
+    renotify:         true,          // garante som/vibração mesmo que tag já exista
+    requireInteraction: true,        // não some automaticamente no Android
+    vibrate:          [300, 100, 300, 100, 500],
+    silent:           false,
+    actions: [
+      { action: 'open',    title: '📋 Abrir App' },
+      { action: 'dismiss', title: '✖ Fechar'    }
+    ],
     data:  data || { url: location.href }
   };
 
@@ -3530,7 +3573,17 @@ async function _pushTestNotification() {
 function startPushMonitor() {
   if (pushAlertInterval) return;
   checkAndPushAlerts();                                           // verifica imediatamente
-  pushAlertInterval = setInterval(checkAndPushAlerts, 20 * 60 * 1000); // a cada 20 min
+  pushAlertInterval = setInterval(checkAndPushAlerts, 5 * 60 * 1000); // a cada 5 min
+
+  // Reverifica sempre que o usuário retorna ao app (visibilidade)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') checkAndPushAlerts();
+  });
+
+  // Reverifica ao recuperar conexão de rede
+  window.addEventListener('online', () => {
+    setTimeout(checkAndPushAlerts, 2000);
+  });
 }
 
 function checkAndPushAlerts() {
@@ -3612,7 +3665,17 @@ async function initFCM() {
     });
 
     console.log('[FCM] Messaging inicializado');
-    if (Notification.permission === 'granted') await _fcmRegisterToken();
+    if (Notification.permission === 'granted') {
+      await _fcmRegisterToken();
+    } else {
+      // Quando permissão for concedida depois, registra o token
+      const _waitPerm = setInterval(async () => {
+        if (Notification.permission === 'granted') {
+          clearInterval(_waitPerm);
+          await _fcmRegisterToken();
+        }
+      }, 2000);
+    }
   } catch(e) {
     console.warn('[FCM] Erro ao inicializar:', e);
   }
@@ -3626,15 +3689,33 @@ async function _fcmRegisterToken() {
       serviceWorkerRegistration: swRegistration
     });
     if (token) {
-      localStorage.setItem('pj_fcm_token', token);
-      if (db) {
-        await db.collection('fcm_tokens').doc(token.slice(-20)).set({
-          token,
-          device: navigator.userAgent.slice(0, 80),
-          ts: new Date().toISOString()
-        }).catch(() => {});
+      const storedToken  = localStorage.getItem('pj_fcm_token');
+      const storedTs     = parseInt(localStorage.getItem('pj_fcm_token_ts') || '0', 10);
+      const ageDias      = (Date.now() - storedTs) / 86400000;
+      const tokenMudou   = storedToken !== token;
+      const tokenVelho   = ageDias > 15; // renova se passaram 15 dias
+
+      if (tokenMudou || tokenVelho || !storedTs) {
+        // Remove token antigo do Firestore se mudou
+        if (storedToken && storedToken !== token && db) {
+          db.collection('fcm_tokens').doc(storedToken.slice(-20)).delete().catch(() => {});
+        }
+
+        localStorage.setItem('pj_fcm_token', token);
+        localStorage.setItem('pj_fcm_token_ts', String(Date.now()));
+
+        if (db) {
+          await db.collection('fcm_tokens').doc(token.slice(-20)).set({
+            token,
+            device: navigator.userAgent.slice(0, 80),
+            ts:     new Date().toISOString(),
+            tsMs:   Date.now()
+          }).catch(() => {});
+        }
+        console.log('[FCM] Token registrado/renovado');
+      } else {
+        console.log('[FCM] Token ainda válido — sem renovação necessária');
       }
-      console.log('[FCM] Token registrado');
     }
   } catch(e) {
     console.warn('[FCM] Erro ao obter token:', e);
@@ -3662,18 +3743,53 @@ async function _fcmSendToAll(title, body, svcId, includeAll = false) {
 
     if (!tokens.length) return;
 
-    await fetch(PIPEDREAM_WEBHOOK, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        tokens,
-        title,
-        body,
-        data: { svcId: String(svcId), url: location.href }
-      })
+    const payload = JSON.stringify({
+      tokens,
+      title,
+      body,
+      data: { svcId: String(svcId), url: location.href }
     });
 
-    console.log('[FCM] Enviado via Pipedream para', tokens.length, 'dispositivo(s)', includeAll ? '(todos)' : '(outros)');
+    // Tenta enviar com timeout de 8s — retry automático 1x em caso de falha
+    const _sendOnce = async () => {
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), 8000);
+      try {
+        const res = await fetch(PIPEDREAM_WEBHOOK, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: payload,
+          signal: ctrl.signal
+        });
+        clearTimeout(tid);
+        return res.ok;
+      } catch(e) {
+        clearTimeout(tid);
+        return false;
+      }
+    };
+
+    let ok = await _sendOnce();
+    if (!ok) {
+      // Aguarda 3s e tenta novamente
+      await new Promise(r => setTimeout(r, 3000));
+      ok = await _sendOnce();
+    }
+
+    if (ok) {
+      console.log('[FCM] Enviado via Pipedream para', tokens.length, 'dispositivo(s)', includeAll ? '(todos)' : '(outros)');
+    } else {
+      console.warn('[FCM] Falha no envio via Pipedream após retry — salvando no Firestore para reenvio');
+      // Salva no Firestore como fallback para reenvio posterior
+      try {
+        await db.collection('fcm_pending').add({
+          tokens, title, body,
+          data: { svcId: String(svcId), url: location.href },
+          ts: new Date().toISOString(),
+          attempts: 2
+        });
+      } catch(fe) { console.warn('[FCM] Não foi possível salvar pending:', fe); }
+    }
   } catch(e) {
     console.warn('[FCM] Erro ao enviar via Pipedream:', e);
   }
