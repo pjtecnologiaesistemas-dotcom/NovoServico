@@ -1,95 +1,85 @@
-/* ============================================================
-   sw.js — Service Worker PJ Tecnologia
-   Versão: 3.0 — com suporte a som via postMessage ao app
-   ============================================================ */
+/* ================================================================
+   SERVICE WORKER — PJ Tecnologia · Novo Serviço
+   Versão: 1.0.0
+   ================================================================ */
 
-const CACHE_NAME = 'pjtech-v3';
+const CACHE_NAME = 'pj-servicos-v1';
+const ASSETS = [
+  './',
+  './index.html',
+  './manifest.json',
+  './icon-192.png',
+  './icon-512.png'
+];
 
+/* ─── INSTALL ─── */
 self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache => {
+      return cache.addAll(ASSETS).catch(err => {
+        console.warn('[SW] Cache parcial:', err);
+      });
+    })
+  );
   self.skipWaiting();
 });
 
+/* ─── ACTIVATE ─── */
 self.addEventListener('activate', event => {
   event.waitUntil(
-    Promise.all([
-      caches.keys().then(keys =>
-        Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-      ),
-      self.clients.claim()
-    ])
+    caches.keys().then(keys =>
+      Promise.all(
+        keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
+      )
+    )
   );
+  self.clients.claim();
 });
 
+/* ─── FETCH: Network first, fallback cache ─── */
 self.addEventListener('fetch', event => {
   if (!event.request.url.startsWith(self.location.origin)) return;
-  if (event.request.url.includes('googleapis.com') ||
-      event.request.url.includes('firebase') ||
-      event.request.url.includes('gstatic.com')) return;
-
   event.respondWith(
     fetch(event.request)
       .then(response => {
-        if (response && response.status === 200 && event.request.method === 'GET') {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-        }
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         return response;
       })
       .catch(() => caches.match(event.request))
   );
 });
 
-/* ── Função central: mostra notificação E pede ao app para tocar som ── */
-async function showAndSound(title, body, tag, data) {
-  // 1. Mostra a notificação (vibra, silent:false deixa o Android usar o som padrão do canal)
-  await self.registration.showNotification(title, {
-    body,
-    icon:     'icon-192.png',
-    badge:    'icon-192.png',
-    tag:      tag || 'pjtech-alert',
-    renotify: true,
-    silent:   false,          // Android usa o som de notificação do sistema
-    vibrate:  [200, 100, 200, 100, 200],
-    data:     data || { url: self.location.origin }
-  });
-
-  // 2. Avisa todos os clientes abertos para tocar o som customizado via Web Audio
-  const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-  clients.forEach(client => {
-    client.postMessage({ type: 'PLAY_ALERT_SOUND' });
-  });
-}
-
-/* ── PUSH (Web Push Protocol) ── */
+/* ─── PUSH: recebe notificação ─── */
 self.addEventListener('push', event => {
-  let d = { title: '🔔 PJ Tecnologia', body: 'Nova notificação', tag: 'pjtech' };
-  if (event.data) {
-    try { d = { ...d, ...event.data.json() }; }
-    catch(e) { d.body = event.data.text(); }
-  }
-  event.waitUntil(showAndSound(d.title, d.body, d.tag, d.data));
-});
-
-/* ── MESSAGE: comandos vindos do app ── */
-self.addEventListener('message', event => {
-  if (!event.data) return;
-
-  if (event.data.type === 'SHOW_NOTIFICATION') {
-    const { title, body, tag, data } = event.data;
-    event.waitUntil(
-      showAndSound(
-        title || '🔔 PJ Tecnologia',
-        body  || '',
-        tag   || 'pjtech-alert',
-        data  || { url: self.location.origin }
-      )
-    );
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch(e) {
+    data = { title: '🔔 PJ Serviços', body: event.data ? event.data.text() : 'Nova notificação' };
   }
 
-  if (event.data.type === 'SKIP_WAITING') self.skipWaiting();
+  const title   = data.title  || '🔔 PJ Tecnologia';
+  const options = {
+    body:     data.body    || 'Você tem um novo alerta.',
+    icon:     './icon-192.png',
+    badge:    './icon-192.png',
+    tag:      data.tag     || 'pjtech-push',
+    renotify: false,
+    vibrate:  [200, 100, 200],
+    data:     data.data    || { url: self.location.origin }
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(title, options).then(() => {
+      return self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
+        clients.forEach(client => client.postMessage({ type: 'PLAY_ALERT_SOUND' }));
+      });
+    })
+  );
 });
 
-/* ── NOTIFICATIONCLICK ── */
+/* ─── NOTIFICATIONCLICK: abre o app ao clicar ─── */
 self.addEventListener('notificationclick', event => {
   event.notification.close();
   const targetUrl = (event.notification.data && event.notification.data.url)
@@ -97,12 +87,30 @@ self.addEventListener('notificationclick', event => {
     : self.location.origin;
 
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true })
-      .then(list => {
-        for (const c of list) {
-          if (c.url.startsWith(self.location.origin) && 'focus' in c) return c.focus();
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
+      for (const client of clients) {
+        if (client.url.startsWith(self.location.origin) && 'focus' in client) {
+          return client.focus();
         }
-        if (self.clients.openWindow) return self.clients.openWindow(targetUrl);
-      })
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(targetUrl);
+    })
   );
+});
+
+/* ─── MESSAGE: comandos do app principal ─── */
+self.addEventListener('message', event => {
+  if (!event.data) return;
+  if (event.data.type === 'SKIP_WAITING') self.skipWaiting();
+  if (event.data.type === 'SHOW_NOTIFICATION') {
+    const { title, body, tag, data } = event.data;
+    self.registration.showNotification(title || '🔔 PJ Serviços', {
+      body:    body || '',
+      icon:    './icon-192.png',
+      badge:   './icon-192.png',
+      tag:     tag  || 'pjtech-msg',
+      vibrate: [200, 100, 200],
+      data:    data || { url: self.location.origin }
+    });
+  }
 });
