@@ -580,10 +580,15 @@
 
     <!-- 1. CLIENTE -->
     <div class="section">
-      <div class="section-header">
+      <div class="section-header" style="margin-bottom:0;cursor:pointer;user-select:none" onclick="toggleSection('sec1')">
         <div class="section-num">1</div>
         <h2 class="section-title">Cliente</h2>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+          <span id="sec1-badge" style="font-family:'Rajdhani',sans-serif;font-size:.6rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--danger);padding:3px 10px;border:1px solid rgba(224,92,92,.3);border-radius:4px">Obrigatório</span>
+          <button type="button" id="sec1-btn" style="background:rgba(0,200,248,.08);border:1px solid rgba(0,200,248,.2);border-radius:6px;color:var(--cyan);font-family:'Orbitron',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:6px 14px;cursor:pointer;transition:all .2s;white-space:nowrap">▲ Aberto</button>
+        </div>
       </div>
+      <div id="sec1-body" style="margin-top:18px">
       <div class="field">
         <label>Nome do cliente <span class="req">*</span></label>
         <div class="ac-wrap">
@@ -603,14 +608,20 @@
           <input type="text" id="client-phone" placeholder="(00) 00000-0000" oninput="maskPhone(this)" maxlength="15" autocomplete="new-password"/>
         </div>
       </div>
+      </div><!-- /sec1-body -->
     </div>
 
     <!-- 2. SERVIÇO -->
     <div class="section">
-      <div class="section-header">
+      <div class="section-header" style="margin-bottom:0;cursor:pointer;user-select:none" onclick="toggleSection('sec2')">
         <div class="section-num">2</div>
         <h2 class="section-title">Serviço Solicitado</h2>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+          <span id="sec2-badge" style="font-family:'Rajdhani',sans-serif;font-size:.6rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--danger);padding:3px 10px;border:1px solid rgba(224,92,92,.3);border-radius:4px">Obrigatório</span>
+          <button type="button" id="sec2-btn" style="background:rgba(0,200,248,.08);border:1px solid rgba(0,200,248,.2);border-radius:6px;color:var(--cyan);font-family:'Orbitron',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:6px 14px;cursor:pointer;transition:all .2s;white-space:nowrap">▲ Aberto</button>
+        </div>
       </div>
+      <div id="sec2-body" style="margin-top:18px">
       <div class="grid-2">
         <div class="field">
           <label>Tipo de serviço <span class="req">*</span></label>
@@ -641,14 +652,20 @@
         <label>Descrição / Escopo do trabalho</label>
         <textarea id="service-desc" placeholder="Detalhes do que será realizado…"></textarea>
       </div>
+      </div><!-- /sec2-body -->
     </div>
 
     <!-- 3. DATA E HORÁRIOS -->
     <div class="section">
-      <div class="section-header">
+      <div class="section-header" style="margin-bottom:0;cursor:pointer;user-select:none" onclick="toggleSection('sec3')">
         <div class="section-num">3</div>
         <h2 class="section-title">Data, Período e Horários</h2>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+          <span id="sec3-badge" style="font-family:'Rajdhani',sans-serif;font-size:.6rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--danger);padding:3px 10px;border:1px solid rgba(224,92,92,.3);border-radius:4px">Obrigatório</span>
+          <button type="button" id="sec3-btn" style="background:rgba(0,200,248,.08);border:1px solid rgba(0,200,248,.2);border-radius:6px;color:var(--cyan);font-family:'Orbitron',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:6px 14px;cursor:pointer;transition:all .2s;white-space:nowrap">▲ Aberto</button>
+        </div>
       </div>
+      <div id="sec3-body" style="margin-top:18px">
       <!-- CALENDÁRIO MULTI-DATA -->
       <div class="field" style="margin-bottom:14px">
         <label>Dias do serviço <span class="req">*</span> <span style="font-size:.6rem;color:var(--muted);font-weight:400;letter-spacing:0;text-transform:none">— toque nas datas para selecionar</span></label>
@@ -732,14 +749,20 @@
           </div>
         </div>
       </div>
+      </div><!-- /sec3-body -->
     </div>
 
     <!-- 4. EQUIPE E REMUNERAÇÃO -->
     <div class="section">
-      <div class="section-header">
+      <div class="section-header" style="margin-bottom:0;cursor:pointer;user-select:none" onclick="toggleSection('sec4')">
         <div class="section-num">4</div>
         <h2 class="section-title">Equipe e Remuneração</h2>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+          <span id="sec4-badge" style="font-family:'Rajdhani',sans-serif;font-size:.6rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--danger);padding:3px 10px;border:1px solid rgba(224,92,92,.3);border-radius:4px">Obrigatório</span>
+          <button type="button" id="sec4-btn" style="background:rgba(0,200,248,.08);border:1px solid rgba(0,200,248,.2);border-radius:6px;color:var(--cyan);font-family:'Orbitron',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:6px 14px;cursor:pointer;transition:all .2s;white-space:nowrap">▲ Aberto</button>
+        </div>
       </div>
+      <div id="sec4-body" style="margin-top:18px">
       <div class="grid-3">
         <div class="field">
           <label>Vagas (nº de colaboradores) <span class="req">*</span></label>
@@ -772,6 +795,7 @@
         <label>Observações para o colaborador</label>
         <input type="text" id="pay-obs" placeholder="Ex.: Levar EPI, uniforme obrigatório, ponto de encontro…" autocomplete="new-password"/>
       </div>
+      </div><!-- /sec4-body -->
     </div>
 
     <!-- 5. FINANCEIRO CLIENTE -->
@@ -3328,6 +3352,22 @@ function histExportPDF(){
   showToast('✓ PDF gerado! Imprima ou salve com Ctrl+P / ⌘P');
 }
 
+// ══════════════════════════════════════════
+// GAVETAS DE SEÇÃO (1–4)
+// ══════════════════════════════════════════
+function toggleSection(id){
+  const body  = document.getElementById(id+'-body');
+  const btn   = document.getElementById(id+'-btn');
+  const badge = document.getElementById(id+'-badge');
+  const open  = body.style.display === 'none';
+  body.style.display   = open ? 'block' : 'none';
+  btn.textContent      = open ? '▲ Aberto' : '▼ Fechado';
+  btn.style.background = open ? 'rgba(0,200,248,.18)' : 'rgba(0,200,248,.08)';
+  badge.textContent    = open ? 'Obrigatório' : 'Obrigatório';
+  badge.style.color    = open ? 'var(--danger)' : 'var(--muted)';
+  badge.style.borderColor = open ? 'rgba(224,92,92,.3)' : 'rgba(0,200,248,.12)';
+}
+
 function toggleFinanceiro(){
   const body  = document.getElementById('fin-body');
   const btn   = document.getElementById('fin-toggle-btn');
@@ -3524,7 +3564,7 @@ async function _pushSend(title, body, tag, data) {
   const opts = {
     body,
     icon:             'icon-192.png',
-    badge:            'icon-192.png',
+    badge:            'badge-96.png',
     tag:              tag || 'pjtech-alert',
     renotify:         true,          // garante som/vibração mesmo que tag já exista
     requireInteraction: true,        // não some automaticamente no Android
