@@ -1,116 +1,167 @@
 /* ================================================================
-   SERVICE WORKER — PJ Tecnologia · Novo Serviço
-   Versão: 1.0.0
+   sw.js — PJ Tecnologia Service Worker  (v4 — robusto)
+   ================================================================
+   Melhorias aplicadas:
+   • notificationclick: abre o app ao tocar na notificação
+   • notificationclose: log para debug
+   • push: recebe push vindo do servidor FCM/Pipedream diretamente
+   • fetch: cache-first para assets estáticos (offline resiliente)
+   • SW_PING: responde keep-alive do app
+   • SKIP_WAITING: ativação imediata sem esperar fechar abas
    ================================================================ */
 
-const CACHE_NAME = 'pj-servicos-v1';
-const ASSETS = [
+const CACHE_NAME   = 'pjtech-v4';
+const STATIC_CACHE = [
   './',
   './index.html',
-  './manifest.json',
   './icon-192.png',
-  './icon-512.png'
+  './manifest.json'
 ];
 
-/* ─── INSTALL ─── */
+/* ── Instalação: pré-cache dos assets essenciais ── */
 self.addEventListener('install', event => {
+  self.skipWaiting(); // ativa imediatamente sem esperar
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(ASSETS).catch(err => {
-        console.warn('[SW] Cache parcial:', err);
-      });
-    })
+    caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_CACHE).catch(() => {}))
   );
-  self.skipWaiting();
 });
 
-/* ─── ACTIVATE ─── */
+/* ── Ativação: limpa caches antigos ── */
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(
-        keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
-      )
-    )
+      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+    ).then(() => self.clients.claim()) // assume controle imediato de todas as abas
   );
-  self.clients.claim();
 });
 
-/* ─── FETCH: Network first, fallback cache ─── */
+/* ── Fetch: cache-first para assets, network-first para dados ── */
 self.addEventListener('fetch', event => {
+  // Ignora requests não-GET e cross-origin
+  if (event.request.method !== 'GET') return;
   if (!event.request.url.startsWith(self.location.origin)) return;
-  event.respondWith(
-    fetch(event.request)
-      .then(response => {
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-        return response;
-      })
-      .catch(() => caches.match(event.request))
-  );
-});
 
-/* ─── PUSH: recebe notificação ─── */
-self.addEventListener('push', event => {
-  let data = {};
-  try {
-    data = event.data ? event.data.json() : {};
-  } catch(e) {
-    data = { title: '🔔 PJ Serviços', body: event.data ? event.data.text() : 'Nova notificação' };
+  // Network-first para o index.html (sempre fresco)
+  if (event.request.url.endsWith('index.html') || event.request.url.endsWith('/')) {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match('./index.html'))
+    );
+    return;
   }
 
-  const title   = data.title  || '🔔 PJ Tecnologia';
-  const options = {
-    body:     data.body    || 'Você tem um novo alerta.',
-    icon:     './icon-192.png',
-    badge:    './icon-192.png',
-    tag:      data.tag     || 'pjtech-push',
-    renotify: false,
-    vibrate:  [200, 100, 200],
-    data:     data.data    || { url: self.location.origin }
-  };
+  // Cache-first para ícones, fontes e manifest
+  event.respondWith(
+    caches.match(event.request).then(cached => cached || fetch(event.request))
+  );
+});
+
+/* ── Push: recebe notificação do servidor (app fechado/background) ── */
+self.addEventListener('push', event => {
+  let title = '🚨 PJ Tecnologia';
+  let body  = 'Novo alerta de serviço';
+  let data  = { url: self.location.origin };
+  let tag   = 'pjtech-push-' + Date.now();
+
+  try {
+    if (event.data) {
+      const payload = event.data.json();
+      title = payload.title || title;
+      body  = payload.body  || body;
+      data  = payload.data  || data;
+      tag   = payload.tag   || tag;
+    }
+  } catch(e) {
+    // payload não é JSON — usa como texto
+    if (event.data) body = event.data.text();
+  }
 
   event.waitUntil(
-    self.registration.showNotification(title, options).then(() => {
-      return self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
-        clients.forEach(client => client.postMessage({ type: 'PLAY_ALERT_SOUND' }));
-      });
+    self.registration.showNotification(title, {
+      body,
+      icon:               '/icon-192.png',
+      badge:              '/icon-192.png',
+      tag,
+      renotify:           true,
+      requireInteraction: true,          // não some no Android
+      vibrate:            [300, 100, 300, 100, 500],
+      silent:             false,
+      actions: [
+        { action: 'open',    title: '📋 Abrir App' },
+        { action: 'dismiss', title: '✖ Fechar'    }
+      ],
+      data
     })
   );
 });
 
-/* ─── NOTIFICATIONCLICK: abre o app ao clicar ─── */
+/* ── Notificationclick: abre/foca o app ao tocar na notificação ── */
 self.addEventListener('notificationclick', event => {
   event.notification.close();
+
+  if (event.action === 'dismiss') return;
+
   const targetUrl = (event.notification.data && event.notification.data.url)
     ? event.notification.data.url
     : self.location.origin;
 
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
-      for (const client of clients) {
-        if (client.url.startsWith(self.location.origin) && 'focus' in client) {
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+      // Se já tem uma aba do app aberta, foca nela
+      for (const client of clientList) {
+        if (client.url === targetUrl && 'focus' in client) {
           return client.focus();
         }
       }
-      if (self.clients.openWindow) return self.clients.openWindow(targetUrl);
+      // Senão, abre uma nova aba
+      if (clients.openWindow) return clients.openWindow(targetUrl);
     })
   );
+
+  // Avisa o app (se aberto) para tocar o som de alerta
+  clients.matchAll({ type: 'window' }).then(clientList => {
+    clientList.forEach(client => client.postMessage({ type: 'PLAY_ALERT_SOUND' }));
+  });
 });
 
-/* ─── MESSAGE: comandos do app principal ─── */
+/* ── Notificationclose: log para debug ── */
+self.addEventListener('notificationclose', event => {
+  console.log('[SW] Notificação fechada:', event.notification.tag);
+});
+
+/* ── Mensagens do app principal ── */
 self.addEventListener('message', event => {
   if (!event.data) return;
-  if (event.data.type === 'SKIP_WAITING') self.skipWaiting();
-  if (event.data.type === 'SHOW_NOTIFICATION') {
-    const { title, body, tag, data } = event.data;
-    self.registration.showNotification(title || '🔔 PJ Serviços', {
-      body:    body || '',
-      icon:    './icon-192.png',
-      badge:   './icon-192.png',
-      tag:     tag  || 'pjtech-msg',
-      vibrate: [200, 100, 200],
-      data:    data || { url: self.location.origin }
-    });
+
+  switch (event.data.type) {
+    case 'SKIP_WAITING':
+      self.skipWaiting();
+      break;
+
+    case 'SW_PING':
+      // Responde o keep-alive para confirmar que o SW está vivo
+      if (event.ports && event.ports[0]) {
+        event.ports[0].postMessage({ type: 'SW_PONG', ts: Date.now() });
+      }
+      break;
+
+    case 'SHOW_NOTIFICATION':
+      // App pede pro SW mostrar uma notificação (garante que aparece mesmo em background)
+      const { title, body, tag, data } = event.data;
+      self.registration.showNotification(title || '🚨 PJ Tecnologia', {
+        body:               body || '',
+        icon:               '/icon-192.png',
+        badge:              '/icon-192.png',
+        tag:                tag || 'pjtech-sw-msg',
+        renotify:           true,
+        requireInteraction: true,
+        vibrate:            [300, 100, 300, 100, 500],
+        silent:             false,
+        actions: [
+          { action: 'open',    title: '📋 Abrir App' },
+          { action: 'dismiss', title: '✖ Fechar'    }
+        ],
+        data: data || { url: self.location.origin }
+      });
+      break;
   }
 });
