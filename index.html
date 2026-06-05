@@ -405,6 +405,14 @@
     .ppl-card-actions button:hover{background:rgba(0,200,248,.08);border-color:var(--cyan);color:var(--cyan)}
     .ppl-card-actions button.del:hover{background:rgba(224,92,92,.08);border-color:var(--danger);color:var(--danger)}
 
+    /* ── CLIENTE CARD COLAPSÁVEL ── */
+    .ppl-card.collapsible .ppl-card-top{cursor:pointer;user-select:none;transition:background .15s}
+    .ppl-card.collapsible .ppl-card-top:hover{background:rgba(0,200,248,.04)}
+    .ppl-card-collapse-icon{font-size:.7rem;color:var(--muted);transition:transform .25s;flex-shrink:0;margin-left:4px}
+    .ppl-card.collapsible.expanded .ppl-card-collapse-icon{transform:rotate(180deg)}
+    .ppl-card-details{display:none;border-top:1px solid rgba(0,200,248,.07);animation:fadeSlide .2s ease}
+    .ppl-card.collapsible.expanded .ppl-card-details{display:block}
+
     /* ── ESCALA SELECTOR ── */
     .escala-wrap{display:flex;gap:8px;margin-top:4px}
     .escala-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;background:var(--surface2);border:1px solid rgba(0,200,248,.12);border-radius:var(--radius);padding:10px 8px;cursor:pointer;transition:all .2s;user-select:none;position:relative}
@@ -2340,38 +2348,50 @@ function renderClients(){
   container.innerHTML = list.map(c => {
     const initials = c.name.trim().split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
     return `
-    <div class="ppl-card">
-      <div class="ppl-card-top">
+    <div class="ppl-card collapsible" id="ppl-card-${c.id}">
+      <div class="ppl-card-top" onclick="toggleClientCard(${c.id})">
         <div class="ppl-card-avatar">${initials}</div>
         <div class="ppl-card-info">
           <div class="ppl-card-name">${c.name}</div>
-          ${c.doc?`<div class="ppl-card-sub">${c.doc}</div>`:''}
         </div>
-        ${c.obs?`<span class="ppl-card-badge role-coord" title="${c.obs}">OBS</span>`:''}
+        ${c.obs?`<span class="ppl-card-badge role-coord" title="${c.obs}" style="font-size:.52rem;padding:2px 7px">OBS</span>`:''}
+        <span class="ppl-card-collapse-icon">▼</span>
       </div>
-      <div class="ppl-card-body">
-        <div class="ppl-card-field">
-          <div class="ppl-card-label">👤 Contato</div>
-          <div class="ppl-card-val">${c.contact||'—'}</div>
+      <div class="ppl-card-details">
+        <div class="ppl-card-body">
+          ${c.doc?`<div class="ppl-card-field" style="grid-column:1/-1">
+            <div class="ppl-card-label">🏢 CNPJ/CPF</div>
+            <div class="ppl-card-val" style="color:var(--muted)">${c.doc}</div>
+          </div>`:''}
+          <div class="ppl-card-field">
+            <div class="ppl-card-label">👤 Contato</div>
+            <div class="ppl-card-val">${c.contact||'—'}</div>
+          </div>
+          <div class="ppl-card-field">
+            <div class="ppl-card-label">📞 Telefone</div>
+            <div class="ppl-card-val">${c.phone?`<a href="tel:${c.phone}">${c.phone}</a>`:'—'}</div>
+          </div>
+          ${c.obs?`<div class="ppl-card-field" style="grid-column:1/-1">
+            <div class="ppl-card-label">📝 Observação</div>
+            <div class="ppl-card-val" style="color:var(--muted)">${c.obs}</div>
+          </div>`:''}
         </div>
-        <div class="ppl-card-field">
-          <div class="ppl-card-label">📞 Telefone</div>
-          <div class="ppl-card-val">${c.phone?`<a href="tel:${c.phone}">${c.phone}</a>`:'—'}</div>
-        </div>
-        ${c.obs?`<div class="ppl-card-field" style="grid-column:1/-1">
-          <div class="ppl-card-label">📝 Observação</div>
-          <div class="ppl-card-val" style="color:var(--muted)">${c.obs}</div>
-        </div>`:''}
-      </div>
-      <div class="ppl-card-footer">
-        <span class="ppl-card-mat">ID #${String(c.id).slice(-4)}</span>
-        <div class="ppl-card-actions">
-          <button onclick="editClient(${c.id})">✏️ Editar</button>
-          <button class="del" onclick="deleteClient(${c.id})">🗑</button>
+        <div class="ppl-card-footer">
+          <span class="ppl-card-mat">ID #${String(c.id).slice(-4)}</span>
+          <div class="ppl-card-actions">
+            <button onclick="editClient(${c.id})">✏️ Editar</button>
+            <button class="del" onclick="deleteClient(${c.id})">🗑</button>
+          </div>
         </div>
       </div>
     </div>`;
   }).join('');
+}
+
+function toggleClientCard(id){
+  const card = document.getElementById('ppl-card-'+id);
+  if(!card) return;
+  card.classList.toggle('expanded');
 }
 
 function editClient(id){
