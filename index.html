@@ -2711,8 +2711,10 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
   loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js', () => {
     loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js', () => {
+      loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js', () => {
       clearTimeout(fbLoadTimeout);
       initFirebase();
+      initFCM();
       if(fbReady){
         diagLog('ok', 'Firebase + Firestore inicializados');
         diagSetDot('ok');
@@ -2722,6 +2724,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
         diagSetDot('err');
       }
       diagRefresh();
+      }); // firebase-messaging-compat
     });
   });
 });
@@ -3425,6 +3428,60 @@ function _pushUpdateBtn() {
 /* ─────────────────────────────────────────────
    3. PEDE PERMISSÃO AO USUÁRIO
    ───────────────────────────────────────────── */
+/* ─────────────────────────────────────────────
+   FCM — Firebase Cloud Messaging
+   Notificações com app totalmente fechado
+   ───────────────────────────────────────────── */
+const FCM_VAPID_KEY = 'BP4Orp7oo4FteepvqarJFUMk3olYsLdpq1QzIb6K9ao8AkqPUxYfmoRt_R8a3_MeJl0A5-TR6FaoNgJ4LXS3OIQ';
+let fcmMessaging = null;
+
+async function initFCM() {
+  try {
+    if (typeof firebase === 'undefined' || typeof firebase.messaging === 'undefined') return;
+    fcmMessaging = firebase.messaging();
+
+    // Recebe mensagens com app em FOREGROUND
+    fcmMessaging.onMessage(payload => {
+      console.log('[FCM] Mensagem foreground:', payload);
+      const { title, body } = payload.notification || {};
+      if (title) _pushSend(title, body || '', 'fcm-fg-' + Date.now());
+    });
+
+    console.log('[FCM] Messaging inicializado');
+
+    // Se já tem permissão, registra o token automaticamente
+    if (Notification.permission === 'granted') {
+      await _fcmRegisterToken();
+    }
+  } catch(e) {
+    console.warn('[FCM] Erro ao inicializar:', e);
+  }
+}
+
+async function _fcmRegisterToken() {
+  try {
+    if (!fcmMessaging || !swRegistration) return;
+    const token = await fcmMessaging.getToken({
+      vapidKey: FCM_VAPID_KEY,
+      serviceWorkerRegistration: swRegistration
+    });
+    if (token) {
+      console.log('[FCM] Token registrado:', token);
+      localStorage.setItem('pj_fcm_token', token);
+      // Salva no Firestore para envio remoto futuro
+      if (db) {
+        await db.collection('fcm_tokens').doc(token.slice(-20)).set({
+          token,
+          device: navigator.userAgent.slice(0, 80),
+          ts: new Date().toISOString()
+        }).catch(() => {});
+      }
+    }
+  } catch(e) {
+    console.warn('[FCM] Erro ao obter token:', e);
+  }
+}
+
 async function requestPushPermission() {
   if (!('Notification' in window)) {
     showToast('⚠️ Este navegador não suporta notificações.');
@@ -3438,6 +3495,8 @@ async function requestPushPermission() {
   if (result === 'granted') {
     showToast('🔔 Notificações push ativadas!');
     startPushMonitor();
+    // Registra token FCM para notificações com app fechado
+    await _fcmRegisterToken();
     // Envia uma notificação de boas-vindas para confirmar que funciona
     setTimeout(() => {
       _pushSend(
