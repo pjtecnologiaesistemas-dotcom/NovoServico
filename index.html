@@ -1591,6 +1591,25 @@ function quickCover(id){
   updateAlerts();
   renderServices && renderServices();
   showToast('✓ Cobertura de '+svc.client+' confirmada! Executor: '+execName);
+
+  // Notifica confirmação e verifica se ainda há pendentes
+  if (Notification.permission === 'granted') {
+    const fmt = d => d ? new Date(d+'T00:00:00').toLocaleDateString('pt-BR') : '—';
+    const restoFaltam = (svc.vagas||1) - svc.coberturas;
+    if (svc.status === 'done') {
+      _pushSend(
+        '✅ Cobertura confirmada!',
+        `${svc.client} — ${svc.service||''}\n👷 ${execName} · 🎖 ${supName}\n📅 ${fmt(svc.dateStart)}`,
+        'svc-resolved-' + svc.id
+      );
+    } else {
+      _pushSend(
+        '⚠️ Cobertura parcial',
+        `${svc.client} — ainda faltam ${restoFaltam} vaga(s)\n👷 ${execName} registrado`,
+        'svc-partial-' + svc.id
+      );
+    }
+  }
   const el = document.getElementById('balert-'+id);
   if(el){
     el.style.transition = 'opacity .25s,transform .25s';
@@ -3343,9 +3362,12 @@ function toggleDiag(){
    • O botão 🔕 no header fica visível até o usuário conceder permissão.
    ================================================================ */
 
-let swRegistration  = null;
+let swRegistration    = null;
 let pushAlertInterval = null;
-let notifiedIds = new Set(JSON.parse(localStorage.getItem('pj_notified_ids') || '[]'));
+// IDs de serviços já resolvidos (done/partial) — evita re-notificar após resolução
+let resolvedNotifiedIds = new Set(JSON.parse(localStorage.getItem('pj_resolved_notified') || '[]'));
+// Compatibilidade retroativa com chave antiga
+let notifiedIds = new Set();
 
 /* ─────────────────────────────────────────────
    1. REGISTRA O SERVICE WORKER
@@ -3507,57 +3529,60 @@ async function _pushTestNotification() {
    ───────────────────────────────────────────── */
 function startPushMonitor() {
   if (pushAlertInterval) return;
-  checkAndPushAlerts();                                          // verifica imediatamente
-  pushAlertInterval = setInterval(checkAndPushAlerts, 30 * 60 * 1000); // a cada 30 min
+  checkAndPushAlerts();                                           // verifica imediatamente
+  pushAlertInterval = setInterval(checkAndPushAlerts, 20 * 60 * 1000); // a cada 20 min
 }
 
 function checkAndPushAlerts() {
   if (Notification.permission !== 'granted') return;
 
-  const pendentes = services.filter(s =>
-    (s.coberturas || 0) === 0 &&
-    s.status === 'pending' &&
-    !notifiedIds.has(s.id)
-  );
-  if (!pendentes.length) return;
-
   const fmt = d => d ? new Date(d+'T00:00:00').toLocaleDateString('pt-BR') : '—';
 
-  // Agrupa: se houver mais de 1, envia um resumo + 1 notificação individual por serviço (máx 3)
+  // Serviços pendentes sem nenhuma cobertura — SEMPRE notifica (não filtra por notifiedIds)
+  const pendentes = services.filter(s =>
+    (s.coberturas || 0) < (s.vagas || 1) &&
+    s.status !== 'done' &&
+    s.status !== 'partial'
+  );
+
+  // Limpa resolvedNotifiedIds de serviços que já não existem
+  const validIds = new Set(services.map(s => s.id));
+  resolvedNotifiedIds = new Set([...resolvedNotifiedIds].filter(id => validIds.has(id)));
+  localStorage.setItem('pj_resolved_notified', JSON.stringify([...resolvedNotifiedIds]));
+
+  if (!pendentes.length) return;
+
   const total = pendentes.length;
+
+  // Se houver mais de 1 pendente, envia resumo
   if (total > 1) {
     _pushSend(
-      `🚨 ${total} serviços sem cobertura!`,
-      pendentes.slice(0,3).map(s => `• ${s.client} — ${fmt(s.dateStart)}`).join('\n')
-        + (total > 3 ? `\n+ ${total-3} outro(s)…` : ''),
+      `🚨 ${total} serviços aguardando cobertura!`,
+      pendentes.slice(0, 3).map(s => `• ${s.client} — ${fmt(s.dateStart)}`).join('\n')
+        + (total > 3 ? `\n+ ${total - 3} outro(s)…` : ''),
       'pjtech-multi-alert'
     );
   }
 
+  // Notificação individual para cada pendente (tag única por serviço para não acumular)
   pendentes.forEach(s => {
-    const body = `${s.service || 'Serviço'} — ${s.client}\n📅 ${fmt(s.dateStart)} · ${s.timeStart||''}–${s.timeEnd||''}\n📍 ${(s.location||'—').slice(0,60)}`;
+    const faltam = (s.vagas || 1) - (s.coberturas || 0);
+    const body = `${s.service || 'Serviço'} — ${s.client}\n📅 ${fmt(s.dateStart)} · ${s.timeStart||''}–${s.timeEnd||''}\n⚠️ ${faltam} vaga(s) sem cobertura\n📍 ${(s.location||'—').slice(0, 60)}`;
     if (total === 1) {
-      _pushSend('🚨 Serviço sem cobertura!', body, 'svc-' + s.id, { url: location.href, svcId: s.id });
+      _pushSend('🚨 Serviço sem cobertura!', body, 'svc-pending-' + s.id, { url: location.href, svcId: s.id });
     }
-    notifiedIds.add(s.id);
   });
-
-  // Limpa IDs de serviços que não existem mais
-  const validIds = new Set(services.map(s => s.id));
-  notifiedIds = new Set([...notifiedIds].filter(id => validIds.has(id)));
-  localStorage.setItem('pj_notified_ids', JSON.stringify([...notifiedIds]));
 }
 
 /* ─────────────────────────────────────────────
    7. PUSH IMEDIATO ao salvar novo serviço
    ───────────────────────────────────────────── */
 function pushIfUncovered(svc) {
-  if ((svc.coberturas || 0) > 0 || svc.status !== 'pending') return;
-  if (notifiedIds.has(svc.id)) return;
+  if ((svc.coberturas || 0) >= (svc.vagas || 1) || svc.status === 'done' || svc.status === 'partial') return;
 
   const fmt = d => d ? new Date(d+'T00:00:00').toLocaleDateString('pt-BR') : '—';
   const title = '🚨 Novo serviço sem cobertura!';
-  const body = `${svc.service || 'Serviço'} — ${svc.client}\n📅 ${fmt(svc.dateStart)} · ${svc.timeStart||''}–${svc.timeEnd||''}\n📍 ${(svc.location||'—').slice(0,60)}`;
+  const body = `${svc.service || 'Serviço'} — ${svc.client}\n📅 ${fmt(svc.dateStart)} · ${svc.timeStart||''}–${svc.timeEnd||''}\n📍 ${(svc.location||'—').slice(0, 60)}`;
 
   // Envia localmente (app aberto)
   if (Notification.permission === 'granted') {
@@ -3566,9 +3591,6 @@ function pushIfUncovered(svc) {
 
   // Envia para todos os dispositivos via FCM
   _fcmSendToAll(title, body, svc.id);
-
-  notifiedIds.add(svc.id);
-  localStorage.setItem('pj_notified_ids', JSON.stringify([...notifiedIds]));
 }
 
 /* ================================================================
