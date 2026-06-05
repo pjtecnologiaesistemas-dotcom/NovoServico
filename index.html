@@ -3637,13 +3637,10 @@ function pushIfUncovered(svc) {
   const title = '🚨 Novo serviço sem cobertura!';
   const body = `${svc.service || 'Serviço'} — ${svc.client}\n📅 ${fmt(svc.dateStart)} · ${svc.timeStart||''}–${svc.timeEnd||''}\n📍 ${(svc.location||'—').slice(0, 60)}`;
 
-  // Envia localmente (app aberto)
-  if (Notification.permission === 'granted') {
-    _pushSend(title, body, 'svc-new-' + svc.id, { url: location.href, svcId: svc.id });
-  }
-
-  // Envia para todos os dispositivos via FCM
-  _fcmSendToAll(title, body, svc.id);
+  // FCM envia para TODOS os dispositivos (incluindo este).
+  // O próprio onMessage do FCM exibe a notificação quando o app está aberto,
+  // então NÃO chamamos _pushSend aqui para evitar duplicação.
+  _fcmSendToAll(title, body, svc.id, true);
 }
 
 /* ================================================================
@@ -3660,8 +3657,12 @@ async function initFCM() {
 
     // Recebe mensagens com app em FOREGROUND
     fcmMessaging.onMessage(payload => {
+      // Foreground: FCM entregou mensagem com app aberto.
+      // Usa tag baseada no svcId para o SW colapsar duplicatas automaticamente.
       const { title, body } = payload.notification || {};
-      if (title) _pushSend(title, body || '', 'fcm-fg-' + Date.now());
+      const svcId = payload.data && payload.data.svcId;
+      const tag   = svcId ? 'svc-new-' + svcId : 'fcm-fg-' + Date.now();
+      if (title) _pushSend(title, body || '', tag);
     });
 
     console.log('[FCM] Messaging inicializado');
