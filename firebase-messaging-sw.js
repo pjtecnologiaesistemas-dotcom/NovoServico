@@ -48,7 +48,7 @@ messaging.onBackgroundMessage(payload => {
   return self.registration.showNotification(title, {
     body,
     icon:               '/icon-192.png',
-    badge:              '/icon-192.png',
+    badge:              '/badge-96.png',
     tag:                'fcm-bg-' + Date.now(),
     renotify:           true,
     requireInteraction: true,          // não some automaticamente no Android
