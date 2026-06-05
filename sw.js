@@ -79,7 +79,7 @@ self.addEventListener('push', event => {
     self.registration.showNotification(title, {
       body,
       icon:               '/icon-192.png',
-      badge:              '/icon-192.png',
+      badge:              '/badge-96.png',
       tag,
       renotify:           true,
       requireInteraction: true,          // não some no Android
@@ -150,7 +150,7 @@ self.addEventListener('message', event => {
       self.registration.showNotification(title || '🚨 PJ Tecnologia', {
         body:               body || '',
         icon:               '/icon-192.png',
-        badge:              '/icon-192.png',
+        badge:              '/badge-96.png',
         tag:                tag || 'pjtech-sw-msg',
         renotify:           true,
         requireInteraction: true,
