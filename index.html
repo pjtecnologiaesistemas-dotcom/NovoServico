@@ -1609,7 +1609,7 @@ function quickCover(id){
   }
 
   // ✅ Dispara imediatamente para TODOS os dispositivos via FCM
-  _fcmSendToAll(confirmTitle, confirmBody, svc.id);
+  _fcmSendToAll(confirmTitle, confirmBody, svc.id, true);
   const el = document.getElementById('balert-'+id);
   if(el){
     el.style.transition = 'opacity .25s,transform .25s';
@@ -3643,10 +3643,9 @@ async function _fcmRegisterToken() {
 
 const PIPEDREAM_WEBHOOK = 'https://eoj2emy88kqgn1d.m.pipedream.net';
 
-async function _fcmSendToAll(title, body, svcId) {
+async function _fcmSendToAll(title, body, svcId, includeAll = false) {
   if (!db) return;
   try {
-    // Lê todos os tokens registrados no Firestore
     const snap = await db.collection('fcm_tokens').get();
     if (snap.empty) return;
 
@@ -3655,13 +3654,14 @@ async function _fcmSendToAll(title, body, svcId) {
 
     snap.forEach(doc => {
       const token = doc.data().token;
-      // Ignora tokens inválidos e o próprio dispositivo (já recebeu localmente)
-      if (token && token !== myToken) tokens.push(token);
+      if (!token) return;
+      // includeAll=true (confirmações): envia para TODOS os dispositivos
+      // includeAll=false (novo serviço): pula o próprio device (já recebeu localmente)
+      if (includeAll || token !== myToken) tokens.push(token);
     });
 
     if (!tokens.length) return;
 
-    // Envia via Pipedream webhook (FCM v1 API com chave segura no servidor)
     await fetch(PIPEDREAM_WEBHOOK, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -3673,7 +3673,7 @@ async function _fcmSendToAll(title, body, svcId) {
       })
     });
 
-    console.log('[FCM] Enviado via Pipedream para', tokens.length, 'dispositivo(s)');
+    console.log('[FCM] Enviado via Pipedream para', tokens.length, 'dispositivo(s)', includeAll ? '(todos)' : '(outros)');
   } catch(e) {
     console.warn('[FCM] Erro ao enviar via Pipedream:', e);
   }
