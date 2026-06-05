@@ -1593,23 +1593,23 @@ function quickCover(id){
   showToast('✓ Cobertura de '+svc.client+' confirmada! Executor: '+execName);
 
   // Notifica confirmação e verifica se ainda há pendentes
+  const fmt = d => d ? new Date(d+'T00:00:00').toLocaleDateString('pt-BR') : '—';
+  const restoFaltam = (svc.vagas||1) - svc.coberturas;
+
+  const confirmTitle = svc.status === 'done'
+    ? '✅ Cobertura confirmada!'
+    : '⚠️ Cobertura parcial';
+  const confirmBody = svc.status === 'done'
+    ? `${svc.client} — ${svc.service||''}\n👷 ${execName} · 🎖 ${supName}\n📅 ${fmt(svc.dateStart)}`
+    : `${svc.client} — ainda faltam ${restoFaltam} vaga(s)\n👷 ${execName} · 🎖 ${supName}`;
+
+  // Envia localmente (quem está com o app aberto)
   if (Notification.permission === 'granted') {
-    const fmt = d => d ? new Date(d+'T00:00:00').toLocaleDateString('pt-BR') : '—';
-    const restoFaltam = (svc.vagas||1) - svc.coberturas;
-    if (svc.status === 'done') {
-      _pushSend(
-        '✅ Cobertura confirmada!',
-        `${svc.client} — ${svc.service||''}\n👷 ${execName} · 🎖 ${supName}\n📅 ${fmt(svc.dateStart)}`,
-        'svc-resolved-' + svc.id
-      );
-    } else {
-      _pushSend(
-        '⚠️ Cobertura parcial',
-        `${svc.client} — ainda faltam ${restoFaltam} vaga(s)\n👷 ${execName} registrado`,
-        'svc-partial-' + svc.id
-      );
-    }
+    _pushSend(confirmTitle, confirmBody, 'svc-cover-confirm-' + svc.id);
   }
+
+  // ✅ Dispara imediatamente para TODOS os dispositivos via FCM
+  _fcmSendToAll(confirmTitle, confirmBody, svc.id);
   const el = document.getElementById('balert-'+id);
   if(el){
     el.style.transition = 'opacity .25s,transform .25s';
