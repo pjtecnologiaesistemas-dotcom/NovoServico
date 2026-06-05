@@ -245,6 +245,22 @@
     .add-day-btn{display:flex;align-items:center;gap:8px;background:none;border:1px dashed rgba(0,200,248,.18);border-radius:var(--radius);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:12.5px;padding:10px 15px;width:100%;cursor:pointer;transition:border-color .2s,color .2s}
     .add-day-btn:hover{border-color:var(--cyan);color:var(--cyan)}
 
+    /* ── PLANTÃO POR DIA ── */
+    .day-assign-panel{background:rgba(0,200,248,.03);border:1px solid rgba(0,200,248,.14);border-radius:10px;overflow:hidden;margin-top:4px}
+    .day-assign-header{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid rgba(0,200,248,.1);background:rgba(0,200,248,.05)}
+    .day-assign-header-icon{font-size:.85rem;line-height:1}
+    .day-assign-header-title{font-family:'Rajdhani',sans-serif;font-size:.62rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--cyan)}
+    .day-assign-header-hint{font-family:'Rajdhani',sans-serif;font-size:.58rem;letter-spacing:.5px;color:var(--muted);margin-left:auto}
+    .day-assign-row{display:grid;grid-template-columns:auto 1fr 1fr;gap:10px;align-items:center;padding:9px 14px;border-bottom:1px solid rgba(0,200,248,.06)}
+    .day-assign-row:last-child{border-bottom:none}
+    .day-assign-date{font-family:'Orbitron',sans-serif;font-size:.6rem;font-weight:700;color:var(--cyan2);letter-spacing:.5px;white-space:nowrap;min-width:86px}
+    .day-assign-sup{position:relative}
+    .day-assign-sup .ac-dropdown{top:calc(100% + 2px)}
+    @media(max-width:600px){
+      .day-assign-row{grid-template-columns:1fr;gap:6px;padding:10px 12px}
+      .day-assign-date{font-size:.58rem}
+    }
+
     /* pills */
     .pill-group{display:flex;flex-wrap:wrap;gap:7px}
     .pill{background:var(--surface2);border:1px solid rgba(0,200,248,.12);border-radius:50px;padding:6px 14px;font-family:'Rajdhani',sans-serif;font-size:.68rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);cursor:pointer;transition:all .18s;user-select:none}
@@ -802,12 +818,27 @@
       <div class="field" style="margin-top:13px">
         <label>Observações para o colaborador</label>
         <input type="text" id="pay-obs" placeholder="Ex.: Levar EPI, uniforme obrigatório, ponto de encontro…" autocomplete="new-password"/>
+            </div>
+
+      <!-- PLANTÃO POR DIA -->
+      <div id="day-assign-wrap" style="margin-top:18px;display:none">
+        <label style="display:block;margin-bottom:8px;font-family:'Rajdhani',sans-serif;font-size:.65rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">
+          🎖 Supervisor e executor por dia de plantão
+          <span style="font-size:.58rem;color:var(--muted);font-weight:400;letter-spacing:0;text-transform:none;margin-left:6px">— preencha para cada data do serviço</span>
+        </label>
+        <div class="day-assign-panel">
+          <div class="day-assign-header">
+            <span class="day-assign-header-icon">📅</span>
+            <span class="day-assign-header-title">Plantão por Dia</span>
+            <span class="day-assign-header-hint">Supervisor · Executor</span>
+          </div>
+          <div id="day-assign-list"></div>
+        </div>
       </div>
       </div><!-- /sec4-body -->
     </div>
 
-    <!-- 5. FINANCEIRO CLIENTE -->
-    <div class="section">
+    <!-- 5. FINANCEIRO CLIENTE -->div class="section">
       <div class="section-header" style="margin-bottom:0;cursor:pointer;user-select:none" onclick="toggleFinanceiro()">
         <div class="section-num">5</div>
         <h2 class="section-title">Financeiro — Cliente</h2>
@@ -1400,6 +1431,7 @@ function calToggleDate(dateStr){
     document.getElementById('date-end').value   = '';
   }
   updateSummary();
+  updateDayAssignments();
 }
 
 function calUpdateChips(){
@@ -1425,6 +1457,7 @@ function calClearAll(){
   document.getElementById('date-end').value   = '';
   calRender();
   updateSummary();
+  updateDayAssignments();
 }
 
 // Calendário é inicializado no DOMContentLoaded principal abaixo
@@ -1567,6 +1600,18 @@ function renderBalloon(list){
         <span class="balert-tag">💰 R$ ${svc.payCollab.toLocaleString('pt-BR',{minimumFractionDigits:2})} / colab</span>
         <span class="balert-tag">🔄 Escala: ${escalaMap[svc.escala||'todo']}</span>
       </div>
+      ${(()=>{
+        if(!svc.dayAssignments||!svc.dayAssignments.length) return '';
+        const today = new Date().toISOString().slice(0,10);
+        const todayA = svc.dayAssignments.find(a=>a.date===today);
+        const nextA  = svc.dayAssignments.find(a=>a.date>=today&&a.supervisor);
+        const show   = todayA||nextA;
+        if(!show) return '';
+        return \`<div style="background:rgba(63,207,142,.06);border:1px solid rgba(63,207,142,.18);border-radius:7px;padding:8px 10px;margin-bottom:8px;font-size:12px">
+          <div style="font-family:'Rajdhani',sans-serif;font-size:.58rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--success);margin-bottom:5px">📋 Plantão previsto \${show===todayA?'(hoje)':'(próximo)'}: \${show.date.split('-').reverse().join('/')}</div>
+          <div style="color:rgba(200,255,230,.8)">🎖 \${show.supervisor||'Não definido'} &nbsp;·&nbsp; 👷 \${show.executor||'Não definido'}</div>
+        </div>\`;
+      })()}
       <div class="balert-sup-wrap">
         <span class="balert-sup-label">🎖 Supervisor que fez a cobertura *</span>
         <select class="balert-sup-select" id="sup-cover-${svc.id}" onchange="this.classList.remove('invalid');document.getElementById('sup-cover-err-${svc.id}').style.display='none'">
@@ -1584,6 +1629,18 @@ function renderBalloon(list){
         <button class="btn-balert-cover" onclick="quickCover(${svc.id})">✓ Confirmar cobertura</button>
       </div>
     </div>`).join('');
+  // Auto-preenche sup/executor a partir de dayAssignments para hoje
+  const _today = new Date().toISOString().slice(0,10);
+  list.forEach(svc => {
+    if(!svc.dayAssignments||!svc.dayAssignments.length) return;
+    const todayA = svc.dayAssignments.find(a=>a.date===_today)
+                || svc.dayAssignments.find(a=>a.date>=_today&&a.supervisor);
+    if(!todayA) return;
+    const supSel2 = document.getElementById('sup-cover-'+svc.id);
+    const execIn2 = document.getElementById('exec-cover-'+svc.id);
+    if(supSel2 && todayA.supervisor) supSel2.value = todayA.supervisor;
+    if(execIn2 && todayA.executor && !execIn2.value) execIn2.value = todayA.executor;
+  });
 }
 
 function quickCover(id){
@@ -1710,6 +1767,90 @@ function acKeydown(e){
   else if(e.key==='Enter'&&acIndex>=0){ e.preventDefault(); items[acIndex]?.dispatchEvent(new MouseEvent('mousedown')); return; }
   else if(e.key==='Escape'){ closeAc(); return; }
   items.forEach((el,i) => el.classList.toggle('active', i===acIndex));
+}
+
+// ══════════════════════════════════════════
+// PLANTÃO POR DIA — supervisor + executor por data
+// ══════════════════════════════════════════
+// Estado: mapa { 'YYYY-MM-DD': {supervisor:'', executor:''} }
+let dayAssignState = {};
+
+function updateDayAssignments(){
+  const wrap = document.getElementById('day-assign-wrap');
+  const list = document.getElementById('day-assign-list');
+  if(!wrap || !list) return;
+
+  const dates = [...calSelectedDates];
+
+  if(dates.length === 0){
+    wrap.style.display = 'none';
+    return;
+  }
+
+  // Preserva os valores já preenchidos para datas que continuam
+  const existing = {};
+  dates.forEach(d => {
+    existing[d] = dayAssignState[d] || {supervisor:'', executor:''};
+  });
+  dayAssignState = existing;
+
+  wrap.style.display = 'block';
+
+  // Sinaliza visualmente que a Seção 4 precisa de atenção
+  const sec4Badge = document.getElementById('sec4-badge');
+  const hasFilled = calSelectedDates.every(d => dayAssignState[d]?.supervisor);
+  if(sec4Badge){
+    sec4Badge.style.color = hasFilled ? 'var(--success)' : 'var(--warn)';
+    sec4Badge.style.borderColor = hasFilled ? 'rgba(63,207,142,.3)' : 'rgba(240,165,0,.3)';
+    sec4Badge.textContent = hasFilled ? 'Preenchido' : 'Preencher plantão';
+  }
+
+  const supOptions = supervisors.length
+    ? supervisors.map(s => `<option value="${s.name}">${s.name}${s.role?' — '+s.role:''}</option>`).join('')
+    : '';
+
+  const fmtDate = d => {
+    const [y,m,day] = d.split('-');
+    const weekdays = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+    const wd = weekdays[new Date(y, parseInt(m)-1, parseInt(day)).getDay()];
+    return `${wd} ${day}/${m}`;
+  };
+
+  list.innerHTML = dates.map(d => {
+    const st = dayAssignState[d];
+    return `<div class="day-assign-row" id="dar-${d}">
+      <div class="day-assign-date">📅 ${fmtDate(d)}</div>
+      <div>
+        <div style="font-family:'Rajdhani',sans-serif;font-size:.58rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:rgba(0,200,248,.5);margin-bottom:3px">Supervisor</div>
+        <select style="width:100%;background:var(--surface2);border:1px solid rgba(0,200,248,.18);border-radius:7px;color:var(--white);font-family:'DM Sans',sans-serif;font-size:13px;padding:7px 10px;outline:none;cursor:pointer;-webkit-appearance:none" onchange="dayAssignState['${d}'].supervisor=this.value">
+          <option value="">Selecione…</option>
+          ${supOptions}
+        </select>
+      </div>
+      <div>
+        <div style="font-family:'Rajdhani',sans-serif;font-size:.58rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:rgba(240,165,0,.5);margin-bottom:3px">Executor / Cobertura</div>
+        <input type="text" placeholder="Nome de quem vai trabalhar…" value="${st.executor||''}" style="width:100%;background:var(--surface2);border:1px solid rgba(240,165,0,.2);border-radius:7px;color:var(--white);font-family:'DM Sans',sans-serif;font-size:13px;padding:7px 10px;outline:none;transition:border-color .2s" onfocus="this.style.borderColor='var(--warn)'" onblur="this.style.borderColor='rgba(240,165,0,.2)'" oninput="dayAssignState['${d}'].executor=this.value"/>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Re-apply saved supervisor values
+  dates.forEach(d => {
+    const row = document.getElementById('dar-'+d);
+    if(!row) return;
+    const sel = row.querySelector('select');
+    if(sel && dayAssignState[d].supervisor){
+      sel.value = dayAssignState[d].supervisor;
+    }
+  });
+}
+
+function getDayAssignments(){
+  return calSelectedDates.map(d => ({
+    date: d,
+    supervisor: dayAssignState[d]?.supervisor || '',
+    executor:   dayAssignState[d]?.executor   || ''
+  }));
 }
 
 // ══════════════════════════════════════════
@@ -1979,6 +2120,11 @@ function resetForm(){
   document.getElementById('day-list').innerHTML = '';
   // Reseta calendário
   calSelectedDates = [];
+  dayAssignState = {};
+  const dawEl = document.getElementById('day-assign-wrap');
+  if(dawEl) dawEl.style.display = 'none';
+  const dalEl = document.getElementById('day-assign-list');
+  if(dalEl) dalEl.innerHTML = '';
   calInit();
   closeAc();
 
@@ -2059,6 +2205,8 @@ document.getElementById('service-form').addEventListener('submit', function(e){
     payCollabType:document.getElementById('pay-collab-type').value,
     payObs:       document.getElementById('pay-obs').value.trim(),
     executor:     '',
+    dayAssignments: getDayAssignments(),
+    supervisor:   getDayAssignments().find(a=>a.supervisor)?.supervisor || '',
     payClient:    parseFloat(document.getElementById('payment-value').value)||0,
     payType:      document.getElementById('payment-type').value,
     payMethod:    document.getElementById('payment-method-sel').value,
@@ -2659,14 +2807,19 @@ function viewService(id){
       <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Valor cliente</span><div style="color:var(--accent);margin-top:3px">R$ ${(s.payClient||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</div></div>
       <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Valor colaborador</span><div style="margin-top:3px">R$ ${(s.payCollab||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</div></div>
       <div><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Forma pag.</span><div style="margin-top:3px">${s.payMethod||'—'} ${s.payCond?'· '+s.payCond:''}</div></div>
-      <div style="grid-column:1/-1;border-top:1px solid rgba(0,200,248,.1);padding-top:10px;margin-top:2px">
-        <span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--cyan)">🎖 Supervisor Responsável</span>
-        <div style="color:var(--white);font-weight:600;margin-top:4px;font-size:14px">${s.supervisor||'<span style="color:var(--danger)">Não informado</span>'}</div>
-        ${s.supervisorObs?`<div style="margin-top:3px;font-size:12px;color:var(--muted)">${s.supervisorObs}</div>`:''}
-      </div>
-      <div style="grid-column:1/-1;background:rgba(0,200,248,.04);border:1px solid rgba(0,200,248,.15);border-radius:8px;padding:10px 14px">
-        <span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--cyan)">👷 Quem realizou o serviço</span>
-        <div style="color:${s.executor?'var(--cyan2)':'var(--muted)'};font-weight:${s.executor?'600':'400'};margin-top:4px;font-size:14px">${s.executor||'Não informado'}</div>
+      <div style="grid-column:1/-1;border-top:1px solid rgba(0,200,248,.1);padding-top:12px;margin-top:4px">
+        ${(()=>{
+          const das=s.dayAssignments&&s.dayAssignments.length;
+          const fmtD=d=>{const[y,m,day]=d.split('-');const wd=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][new Date(y,parseInt(m)-1,parseInt(day)).getDay()];return wd+' '+day+'/'+m;};
+          if(das&&s.dayAssignments.length>1){
+            const rows=s.dayAssignments.map(a=>'<tr><td style="padding:5px 6px;border-bottom:1px solid rgba(0,200,248,.05);color:var(--cyan2);font-family:\'Orbitron\',sans-serif;font-size:.58rem;white-space:nowrap">'+fmtD(a.date)+'</td><td style="padding:5px 6px;border-bottom:1px solid rgba(0,200,248,.05);color:'+(a.supervisor?'var(--white)':'var(--danger)')+';font-weight:'+(a.supervisor?600:400)+'">'+( a.supervisor||'Não informado')+'</td><td style="padding:5px 6px;border-bottom:1px solid rgba(0,200,248,.05);color:'+(a.executor?'var(--cyan2)':'var(--muted)')+'">'+( a.executor||'—')+'</td></tr>').join('');
+            return '<div style="font-family:\'Rajdhani\',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);margin-bottom:8px">🎖 Plantão por Dia</div><table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr><th style="font-family:\'Rajdhani\',sans-serif;font-size:.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);text-align:left;padding:4px 6px;border-bottom:1px solid rgba(0,200,248,.1)">Data</th><th style="font-family:\'Rajdhani\',sans-serif;font-size:.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);text-align:left;padding:4px 6px;border-bottom:1px solid rgba(0,200,248,.1)">🎖 Supervisor</th><th style="font-family:\'Rajdhani\',sans-serif;font-size:.55rem;letter-spacing:2px;text-transform:uppercase;color:rgba(240,165,0,.7);text-align:left;padding:4px 6px;border-bottom:1px solid rgba(0,200,248,.1)">👷 Executor</th></tr></thead><tbody>'+rows+'</tbody></table>';
+          } else {
+            const sup=(das?s.dayAssignments[0]?.supervisor:'')||s.supervisor||'';
+            const exe=(das?s.dayAssignments[0]?.executor:'')||s.executor||'';
+            return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><div style="font-family:\'Rajdhani\',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--cyan)">🎖 Supervisor</div><div style="color:'+(sup?'var(--white)':'var(--danger)')+';font-weight:600;margin-top:4px;font-size:13px">'+(sup||'Não informado')+'</div></div><div><div style="font-family:\'Rajdhani\',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:rgba(240,165,0,.7)">👷 Executor</div><div style="color:'+(exe?'var(--cyan2)':'var(--muted)')+';font-weight:'+(exe?600:400)+';margin-top:4px;font-size:13px">'+(exe||'Não informado')+'</div></div></div>';
+          }
+        })()}
       </div>
       ${s.desc?`<div style="grid-column:1/-1"><span style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Descrição</span><div style="margin-top:3px">${s.desc}</div></div>`:''}
     </div>`;
@@ -3056,7 +3209,8 @@ function histGetFiltered(){
     if(qStatus && s.status !== qStatus) return false;
     if(qSup){
       const supMatch = (s.supervisor||'').toLowerCase().includes(qSup) ||
-        (s.coverDetails||[]).some(d => d.supervisor.toLowerCase().includes(qSup));
+        (s.coverDetails||[]).some(d => d.supervisor.toLowerCase().includes(qSup)) ||
+        (s.dayAssignments||[]).some(a => (a.supervisor||'').toLowerCase().includes(qSup));
       if(!supMatch) return false;
     }
     if(dateFrom && s.dateStart && s.dateStart < dateFrom) return false;
@@ -3207,14 +3361,29 @@ function renderHistorico(){
           <div class="hist-label">👥 Vagas / Coberturas</div>
           <div class="hist-val ${cob>=vag?'green':cob>0?'amber':'red'}">${cob} / ${vag}</div>
         </div>
-        <div class="hist-field">
-          <div class="hist-label">🎖 Supervisor</div>
-          <div class="hist-val">${s.supervisor||'—'}</div>
-        </div>
-        <div class="hist-field">
-          <div class="hist-label">👷 Executor</div>
-          <div class="hist-val ${s.executor?'cyan':''}">${s.executor||'—'}</div>
-        </div>
+        ${(()=>{
+          const das=s.dayAssignments&&s.dayAssignments.length>1;
+          if(das){
+            const uniqSup=[...new Set(s.dayAssignments.map(a=>a.supervisor).filter(Boolean))];
+            const uniqExe=[...new Set(s.dayAssignments.map(a=>a.executor).filter(Boolean))];
+            return \`<div class="hist-field">
+              <div class="hist-label">🎖 Supervisores (por dia)</div>
+              <div class="hist-val">\${uniqSup.length?uniqSup.join(' · '):'—'}</div>
+            </div>
+            <div class="hist-field">
+              <div class="hist-label">👷 Executores (por dia)</div>
+              <div class="hist-val cyan">\${uniqExe.length?uniqExe.join(' · '):'—'}</div>
+            </div>\`;
+          }
+          return \`<div class="hist-field">
+            <div class="hist-label">🎖 Supervisor</div>
+            <div class="hist-val">\${s.supervisor||'—'}</div>
+          </div>
+          <div class="hist-field">
+            <div class="hist-label">👷 Executor</div>
+            <div class="hist-val \${s.executor?'cyan':''}">\${s.executor||'—'}</div>
+          </div>\`;
+        })()}
         <!-- Financeiro colaborador -->
         <div class="hist-field">
           <div class="hist-label">💼 Valor Colaborador</div>
@@ -3289,7 +3458,7 @@ function histExportCSV(){
       s.service||'', s.location||'',
       fmt(s.dateStart), fmt(s.dateEnd), dias,
       s.timeStart||'', s.timeEnd||'', s.escala||'todo',
-      s.vagas||1, s.coberturas||0, s.supervisor||'', s.status||'pending',
+      s.vagas||1, s.coberturas||0, (s.dayAssignments&&s.dayAssignments.length>1?[...new Set(s.dayAssignments.map(a=>a.supervisor).filter(Boolean))].join(' | '):s.supervisor||''), s.status||'pending',
       s.payCollab||'', s.payCollabType||'',
       s.payClient||'', s.payMethod||'', s.payCond||'',
       margem, s.createdAt||'', s.desc||''
@@ -3335,7 +3504,7 @@ function histExportPDF(){
       <td>${s.timeStart||'—'} – ${s.timeEnd||'—'}</td>
       <td style="text-align:center">${escalaMap[s.escala||'todo']||'—'}</td>
       <td style="text-align:center">${cob}/${vag}</td>
-      <td>${s.supervisor||'—'}</td>
+      <td>${(s.dayAssignments&&s.dayAssignments.length>1?[...new Set(s.dayAssignments.map(a=>a.supervisor).filter(Boolean))].join(' | '):s.supervisor)||'—'}</td>
       <td style="color:#0d6efd;font-weight:${s.executor?'600':'400'}">${s.executor||'—'}</td>
       <td style="text-align:right;color:#f0a500">${fmtR(s.payCollab)} ${s.payCollabType?'/ '+s.payCollabType:''}</td>
       <td style="text-align:right;color:#3fcf8e">${fmtR(s.payClient)} ${s.payType?'/ '+s.payType:''}</td>
