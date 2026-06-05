@@ -3619,6 +3619,8 @@ async function _fcmRegisterToken() {
   }
 }
 
+const PIPEDREAM_WEBHOOK = 'https://eoj2emy88kqgn1d.m.pipedream.net';
+
 async function _fcmSendToAll(title, body, svcId) {
   if (!db) return;
   try {
@@ -3627,31 +3629,31 @@ async function _fcmSendToAll(title, body, svcId) {
     if (snap.empty) return;
 
     const myToken = localStorage.getItem('pj_fcm_token');
+    const tokens = [];
 
     snap.forEach(doc => {
       const token = doc.data().token;
-      if (!token) return;
-      // Não envia para si mesmo (já recebeu localmente)
-      if (token === myToken) return;
-
-      // Envia via FCM usando a Send API (legada mas sem servidor)
-      fetch('https://fcm.googleapis.com/fcm/send', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'key=' + '845478678895'
-        },
-        body: JSON.stringify({
-          to: token,
-          notification: { title, body },
-          data: { svcId: String(svcId), url: location.href }
-        })
-      }).then(r => r.json())
-        .then(r => console.log('[FCM] Enviado:', r))
-        .catch(e => console.warn('[FCM] Erro envio:', e));
+      // Ignora tokens inválidos e o próprio dispositivo (já recebeu localmente)
+      if (token && token !== myToken) tokens.push(token);
     });
+
+    if (!tokens.length) return;
+
+    // Envia via Pipedream webhook (FCM v1 API com chave segura no servidor)
+    await fetch(PIPEDREAM_WEBHOOK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tokens,
+        title,
+        body,
+        data: { svcId: String(svcId), url: location.href }
+      })
+    });
+
+    console.log('[FCM] Enviado via Pipedream para', tokens.length, 'dispositivo(s)');
   } catch(e) {
-    console.warn('[FCM] Erro ao buscar tokens:', e);
+    console.warn('[FCM] Erro ao enviar via Pipedream:', e);
   }
 }
 
