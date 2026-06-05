@@ -1678,9 +1678,20 @@ function acInput(inp){
 
 function acSelect(clientId){
   const c = clients.find(x => x.id === clientId); if(!c) return;
-  document.getElementById('client-name').value    = c.name;
-  document.getElementById('client-contact').value = c.contact||'';
-  document.getElementById('client-phone').value   = c.phone||'';
+  document.getElementById("client-name").value    = c.name;
+  document.getElementById("client-contact").value = c.contact||"";
+  document.getElementById("client-phone").value   = c.phone||"";
+
+  // Garante que o sec1 esteja aberto para mostrar os campos preenchidos
+  const sec1Body  = document.getElementById("sec1-body");
+  const sec1Btn   = document.getElementById("sec1-btn");
+  const sec1Badge = document.getElementById("sec1-badge");
+  if(sec1Body && sec1Body.style.display === "none"){
+    sec1Body.style.display   = "block";
+    if(sec1Btn)   { sec1Btn.textContent = "▲ Aberto"; sec1Btn.style.background = "rgba(0,200,248,.18)"; }
+    if(sec1Badge) { sec1Badge.style.color = "var(--danger)"; sec1Badge.style.borderColor = "rgba(224,92,92,.3)"; }
+  }
+
   closeAc(); updateSummary();
 }
 
