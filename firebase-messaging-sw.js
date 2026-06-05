@@ -19,19 +19,21 @@ const messaging = firebase.messaging();
 
 /* ─── Recebe mensagens em BACKGROUND (app fechado/minimizado) ─── */
 messaging.onBackgroundMessage(payload => {
-  const { title, body } = payload.notification || {};
+  // Tenta pegar título/body do campo notification OU do campo data
+  const n = payload.notification || {};
+  const d = payload.data || {};
 
-  const notificationTitle = title || '🔔 PJ Tecnologia';
-  const notificationOptions = {
-    body:    body || 'Novo alerta de serviço.',
+  const title = n.title || d.title || '🔔 PJ Tecnologia';
+  const body  = n.body  || d.body  || 'Novo alerta de serviço.';
+
+  return self.registration.showNotification(title, {
+    body,
     icon:    './icon-192.png',
     badge:   './icon-192.png',
     tag:     'pjtech-fcm-bg',
     vibrate: [200, 100, 200],
-    data:    payload.data || { url: self.location.origin }
-  };
-
-  return self.registration.showNotification(notificationTitle, notificationOptions);
+    data:    d
+  });
 });
 
 /* ─── Clique na notificação: abre o app ─── */
