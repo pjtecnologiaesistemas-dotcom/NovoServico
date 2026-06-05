@@ -3428,60 +3428,6 @@ function _pushUpdateBtn() {
 /* ─────────────────────────────────────────────
    3. PEDE PERMISSÃO AO USUÁRIO
    ───────────────────────────────────────────── */
-/* ─────────────────────────────────────────────
-   FCM — Firebase Cloud Messaging
-   Notificações com app totalmente fechado
-   ───────────────────────────────────────────── */
-const FCM_VAPID_KEY = 'BP4Orp7oo4FteepvqarJFUMk3olYsLdpq1QzIb6K9ao8AkqPUxYfmoRt_R8a3_MeJl0A5-TR6FaoNgJ4LXS3OIQ';
-let fcmMessaging = null;
-
-async function initFCM() {
-  try {
-    if (typeof firebase === 'undefined' || typeof firebase.messaging === 'undefined') return;
-    fcmMessaging = firebase.messaging();
-
-    // Recebe mensagens com app em FOREGROUND
-    fcmMessaging.onMessage(payload => {
-      console.log('[FCM] Mensagem foreground:', payload);
-      const { title, body } = payload.notification || {};
-      if (title) _pushSend(title, body || '', 'fcm-fg-' + Date.now());
-    });
-
-    console.log('[FCM] Messaging inicializado');
-
-    // Se já tem permissão, registra o token automaticamente
-    if (Notification.permission === 'granted') {
-      await _fcmRegisterToken();
-    }
-  } catch(e) {
-    console.warn('[FCM] Erro ao inicializar:', e);
-  }
-}
-
-async function _fcmRegisterToken() {
-  try {
-    if (!fcmMessaging || !swRegistration) return;
-    const token = await fcmMessaging.getToken({
-      vapidKey: FCM_VAPID_KEY,
-      serviceWorkerRegistration: swRegistration
-    });
-    if (token) {
-      console.log('[FCM] Token registrado:', token);
-      localStorage.setItem('pj_fcm_token', token);
-      // Salva no Firestore para envio remoto futuro
-      if (db) {
-        await db.collection('fcm_tokens').doc(token.slice(-20)).set({
-          token,
-          device: navigator.userAgent.slice(0, 80),
-          ts: new Date().toISOString()
-        }).catch(() => {});
-      }
-    }
-  } catch(e) {
-    console.warn('[FCM] Erro ao obter token:', e);
-  }
-}
-
 async function requestPushPermission() {
   if (!('Notification' in window)) {
     showToast('⚠️ Este navegador não suporta notificações.');
@@ -3495,8 +3441,6 @@ async function requestPushPermission() {
   if (result === 'granted') {
     showToast('🔔 Notificações push ativadas!');
     startPushMonitor();
-    // Registra token FCM para notificações com app fechado
-    await _fcmRegisterToken();
     // Envia uma notificação de boas-vindas para confirmar que funciona
     setTimeout(() => {
       _pushSend(
@@ -3608,15 +3552,107 @@ function checkAndPushAlerts() {
    7. PUSH IMEDIATO ao salvar novo serviço
    ───────────────────────────────────────────── */
 function pushIfUncovered(svc) {
-  if (Notification.permission !== 'granted') return;
   if ((svc.coberturas || 0) > 0 || svc.status !== 'pending') return;
   if (notifiedIds.has(svc.id)) return;
 
   const fmt = d => d ? new Date(d+'T00:00:00').toLocaleDateString('pt-BR') : '—';
+  const title = '🚨 Novo serviço sem cobertura!';
   const body = `${svc.service || 'Serviço'} — ${svc.client}\n📅 ${fmt(svc.dateStart)} · ${svc.timeStart||''}–${svc.timeEnd||''}\n📍 ${(svc.location||'—').slice(0,60)}`;
-  _pushSend('🚨 Novo serviço sem cobertura!', body, 'svc-new-' + svc.id, { url: location.href, svcId: svc.id });
+
+  // Envia localmente (app aberto)
+  if (Notification.permission === 'granted') {
+    _pushSend(title, body, 'svc-new-' + svc.id, { url: location.href, svcId: svc.id });
+  }
+
+  // Envia para todos os dispositivos via FCM
+  _fcmSendToAll(title, body, svc.id);
+
   notifiedIds.add(svc.id);
   localStorage.setItem('pj_notified_ids', JSON.stringify([...notifiedIds]));
+}
+
+/* ================================================================
+   FCM — Envio para todos os dispositivos registrados
+   Usa a FCM HTTP v1 API com autenticação via VAPID/OAuth2
+   ================================================================ */
+const FCM_VAPID_KEY = 'BP4Orp7oo4FteepvqarJFUMk3olYsLdpq1QzIb6K9ao8AkqPUxYfmoRt_R8a3_MeJl0A5-TR6FaoNgJ4LXS3OIQ';
+let fcmMessaging = null;
+
+async function initFCM() {
+  try {
+    if (typeof firebase === 'undefined' || typeof firebase.messaging === 'undefined') return;
+    fcmMessaging = firebase.messaging();
+
+    // Recebe mensagens com app em FOREGROUND
+    fcmMessaging.onMessage(payload => {
+      const { title, body } = payload.notification || {};
+      if (title) _pushSend(title, body || '', 'fcm-fg-' + Date.now());
+    });
+
+    console.log('[FCM] Messaging inicializado');
+    if (Notification.permission === 'granted') await _fcmRegisterToken();
+  } catch(e) {
+    console.warn('[FCM] Erro ao inicializar:', e);
+  }
+}
+
+async function _fcmRegisterToken() {
+  try {
+    if (!fcmMessaging || !swRegistration) return;
+    const token = await fcmMessaging.getToken({
+      vapidKey: FCM_VAPID_KEY,
+      serviceWorkerRegistration: swRegistration
+    });
+    if (token) {
+      localStorage.setItem('pj_fcm_token', token);
+      if (db) {
+        await db.collection('fcm_tokens').doc(token.slice(-20)).set({
+          token,
+          device: navigator.userAgent.slice(0, 80),
+          ts: new Date().toISOString()
+        }).catch(() => {});
+      }
+      console.log('[FCM] Token registrado');
+    }
+  } catch(e) {
+    console.warn('[FCM] Erro ao obter token:', e);
+  }
+}
+
+async function _fcmSendToAll(title, body, svcId) {
+  if (!db) return;
+  try {
+    // Lê todos os tokens registrados no Firestore
+    const snap = await db.collection('fcm_tokens').get();
+    if (snap.empty) return;
+
+    const myToken = localStorage.getItem('pj_fcm_token');
+
+    snap.forEach(doc => {
+      const token = doc.data().token;
+      if (!token) return;
+      // Não envia para si mesmo (já recebeu localmente)
+      if (token === myToken) return;
+
+      // Envia via FCM usando a Send API (legada mas sem servidor)
+      fetch('https://fcm.googleapis.com/fcm/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'key=' + '845478678895'
+        },
+        body: JSON.stringify({
+          to: token,
+          notification: { title, body },
+          data: { svcId: String(svcId), url: location.href }
+        })
+      }).then(r => r.json())
+        .then(r => console.log('[FCM] Enviado:', r))
+        .catch(e => console.warn('[FCM] Erro envio:', e));
+    });
+  } catch(e) {
+    console.warn('[FCM] Erro ao buscar tokens:', e);
+  }
 }
 
 // Inicia o PWA após o DOM carregar
