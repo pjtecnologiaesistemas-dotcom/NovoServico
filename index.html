@@ -120,6 +120,11 @@
     .balert-exec-err{font-family:'Rajdhani',sans-serif;font-size:.6rem;color:#ff8888;margin-top:3px;display:none}
     .btn-balert-cover{flex:1;background:rgba(63,207,142,.12);border:1px solid rgba(63,207,142,.28);border-radius:6px;color:var(--success);font-family:'Orbitron',sans-serif;font-size:.52rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:7px 10px;cursor:pointer;transition:all .2s}
     .btn-balert-cover:hover{background:rgba(63,207,142,.22)}
+    .btn-broadcast{width:100%;background:linear-gradient(90deg,rgba(240,165,0,.18) 0%,rgba(240,165,0,.08) 100%);border:1.5px solid rgba(240,165,0,.5);border-radius:7px;color:var(--warn);font-family:'Orbitron',sans-serif;font-size:.52rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:9px 12px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px}
+    .btn-broadcast:hover{background:rgba(240,165,0,.25);border-color:var(--warn);box-shadow:0 0 16px rgba(240,165,0,.2)}
+    .btn-broadcast:disabled{opacity:.45;cursor:not-allowed}
+    .btn-broadcast .btn-broadcast-spin{display:none;width:12px;height:12px;border:2px solid rgba(240,165,0,.3);border-top-color:var(--warn);border-radius:50%;animation:spin .7s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
 
     /* ── MAIN ── */
     .main-wrap{position:relative;z-index:1;width:100%;max-width:1100px;padding:0 32px 60px}
@@ -571,7 +576,13 @@
     <button class="balloon-close" onclick="closeBalloon()">✕</button>
   </div>
   <div class="balloon-body" id="balloon-body"></div>
-  <div class="balloon-footer">Serviços aguardando cobertura de vagas</div>
+  <div class="balloon-footer" style="display:flex;flex-direction:column;gap:8px;padding:10px 14px">
+    <button class="btn-broadcast" id="btn-broadcast" onclick="dispararAlertaGeral()">
+      <span class="btn-broadcast-spin" id="broadcast-spin"></span>
+      📣 Disparar lembrete para todos
+    </button>
+    <div style="font-family:'Rajdhani',sans-serif;font-size:.6rem;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,150,150,.45);text-align:center">Serviços aguardando confirmação de plantão</div>
+  </div>
 </div>
 
 <!-- TABS -->
@@ -804,14 +815,15 @@
         <input type="text" id="pay-obs" placeholder="Ex.: Levar EPI, uniforme obrigatório, ponto de encontro…" autocomplete="new-password"/>
       </div>
 
-      <!-- ── PLANTÃO POR DIA ── -->
-      <div id="day-assignments-panel" style="display:none;margin-top:20px;background:rgba(0,200,248,.04);border:1px solid rgba(0,200,248,.15);border-radius:10px;padding:14px 14px 10px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-          <span style="font-family:'Rajdhani',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--cyan)">📋 Plantão por Dia</span>
-          <span id="day-assign-badge" style="font-family:'Rajdhani',sans-serif;font-size:.58rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--warn);padding:2px 9px;border:1px solid rgba(240,165,0,.3);border-radius:4px">Preencher plantão</span>
+      <!-- PLANTÃO POR DIA -->
+      <div id="plantao-por-dia-wrap" style="display:none;margin-top:18px;background:rgba(0,200,248,.04);border:1px solid rgba(0,200,248,.15);border-radius:12px;overflow:hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid rgba(0,200,248,.1)">
+          <span style="font-family:'Rajdhani',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--cyan)">📋 Plantão por dia</span>
+          <button type="button" onclick="preencherTodosPlantao()" style="background:rgba(0,200,248,.1);border:1px solid rgba(0,200,248,.25);border-radius:5px;color:var(--cyan2);font-family:'Rajdhani',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:4px 12px;cursor:pointer;white-space:nowrap">Preencher Plantão</button>
         </div>
-        <div id="day-assignments-rows" style="display:flex;flex-direction:column;gap:10px"></div>
+        <div id="plantao-dias-list" style="padding:10px 14px;display:flex;flex-direction:column;gap:8px"></div>
       </div>
+
       </div><!-- /sec4-body -->
     </div>
 
@@ -1399,7 +1411,15 @@ function calToggleDate(dateStr){
   if(idx >= 0) calSelectedDates.splice(idx, 1);
   else         calSelectedDates.push(dateStr);
   calSelectedDates.sort();
+  // Limpa dayAssignments de datas removidas
+  dayAssignments = dayAssignments.filter(a => calSelectedDates.includes(a.date));
+  // Garante entrada para novas datas
+  calSelectedDates.forEach(d => {
+    if(!dayAssignments.find(a => a.date === d))
+      dayAssignments.push({ date: d, supervisor: '', executor: '', confirmed: false });
+  });
   calRender();
+  renderPlantaoPorDia();
   // atualiza hidden inputs para compatibilidade
   if(calSelectedDates.length > 0){
     document.getElementById('date-start').value = calSelectedDates[0];
@@ -1410,7 +1430,6 @@ function calToggleDate(dateStr){
     document.getElementById('date-end').value   = '';
   }
   updateSummary();
-  updateDayAssignments();
 }
 
 function calUpdateChips(){
@@ -1436,91 +1455,7 @@ function calClearAll(){
   document.getElementById('date-end').value   = '';
   calRender();
   updateSummary();
-  updateDayAssignments();
 }
-
-// ══════════════════════════════════════════
-// PLANTÃO POR DIA
-// ══════════════════════════════════════════
-function updateDayAssignments(){
-  const panel = document.getElementById('day-assignments-panel');
-  const rows  = document.getElementById('day-assignments-rows');
-  if(!panel || !rows) return;
-
-  if(!calSelectedDates.length){
-    panel.style.display = 'none';
-    dayAssignments = [];
-    return;
-  }
-
-  // Abre sec4 se estiver fechado (sinaliza que tem dados a preencher)
-  const sec4body = document.getElementById('sec4-body');
-  if(sec4body && sec4body.style.display === 'none'){
-    toggleSection('sec4');
-  }
-  panel.style.display = 'block';
-
-  // Monta opções de supervisores
-  const supOptions = supervisors.map(s =>
-    '<option value="'+s.name+'">'+s.name+(s.role?' — '+s.role:'')+'</option>'
-  ).join('');
-
-  // Preserva valores já preenchidos
-  const prev = {};
-  dayAssignments.forEach(a => { prev[a.date] = a; });
-
-  // Dias da semana em pt-BR
-  const weekDays = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
-
-  rows.innerHTML = calSelectedDates.map(d => {
-    const [y,m,day] = d.split('-');
-    const wday = weekDays[new Date(d+'T00:00:00').getDay()];
-    const label = wday+' '+day+'/'+m;
-    const p = prev[d] || {};
-    return '<div style="display:grid;grid-template-columns:90px 1fr 1fr;gap:8px;align-items:center;padding:8px 10px;background:rgba(0,0,0,.15);border-radius:8px;border:1px solid rgba(0,200,248,.1)">' +
-      '<span style="font-family:\'Rajdhani\',sans-serif;font-size:.75rem;font-weight:700;color:var(--cyan2)">'+label+'</span>' +
-      '<select id="da-sup-'+d+'" onchange="syncDayAssignment(\''+d+'\')" style="background:var(--surface2);border:1px solid rgba(0,200,248,.2);border-radius:6px;color:var(--text);font-family:\'DM Sans\',sans-serif;font-size:13px;padding:7px 10px;outline:none;cursor:pointer">' +
-        '<option value="">Supervisor…</option>'+supOptions+
-      '</select>' +
-      '<input type="text" id="da-exec-'+d+'" placeholder="Executor / Cobertura…" value="'+(p.executor||'')+'" oninput="syncDayAssignment(\''+d+'\')" style="background:var(--surface2);border:1px solid rgba(0,200,248,.2);border-radius:6px;color:var(--text);font-family:\'DM Sans\',sans-serif;font-size:13px;padding:7px 10px;outline:none;transition:border-color .2s" onfocus="this.style.borderColor=\'var(--cyan)\'" onblur="this.style.borderColor=\'rgba(0,200,248,.2)\'"/>' +
-    '</div>';
-  }).join('');
-
-  // Restaura valores de supervisores (após innerHTML)
-  calSelectedDates.forEach(d => {
-    const sel = document.getElementById('da-sup-'+d);
-    if(sel && prev[d] && prev[d].supervisor) sel.value = prev[d].supervisor;
-  });
-
-  // Reconstrói dayAssignments com datas atuais
-  dayAssignments = calSelectedDates.map(d => {
-    const p = prev[d] || {};
-    return { date: d, supervisor: p.supervisor||'', executor: p.executor||'' };
-  });
-
-  _updateDayBadge();
-}
-
-function syncDayAssignment(d){
-  const sup  = document.getElementById('da-sup-'+d);
-  const exec = document.getElementById('da-exec-'+d);
-  const entry = dayAssignments.find(a => a.date === d);
-  if(entry){
-    entry.supervisor = sup ? sup.value : '';
-    entry.executor   = exec ? exec.value.trim() : '';
-  }
-  _updateDayBadge();
-}
-
-function _updateDayBadge(){
-  const badge = document.getElementById('day-assign-badge');
-  if(!badge) return;
-  const allFilled = dayAssignments.every(a => a.supervisor);
-  badge.textContent    = allFilled ? 'Preenchido' : 'Preencher plantão';
-  badge.style.color    = allFilled ? 'var(--success)' : 'var(--warn)';
-  badge.style.borderColor = allFilled ? 'rgba(63,207,142,.3)' : 'rgba(240,165,0,.3)';
-}
-
 
 // Calendário é inicializado no DOMContentLoaded principal abaixo
 const firebaseConfig = {
@@ -1615,8 +1550,26 @@ async function deleteFromFb(col, id){
 // ══════════════════════════════════════════
 // SINO — alertas
 // ══════════════════════════════════════════
+// ── helpers: retorna os dias ainda sem confirmação de um serviço ──
+function getPendingDays(svc){
+  if(!svc.dayAssignments || !svc.dayAssignments.length) return [];
+  // Retorna TODOS os dias não confirmados (passados e futuros)
+  // O supervisor precisa fechar cada dia do serviço
+  return svc.dayAssignments.filter(a => !a.confirmed);
+}
+
+// retorna true se o serviço tem ALGUM dia pendente de confirmação
+function hasPendingDays(svc){
+  if(svc.status === 'done') return false;
+  if(svc.dayAssignments && svc.dayAssignments.length){
+    return getPendingDays(svc).length > 0;
+  }
+  // serviço sem dayAssignments (legado): usa lógica antiga
+  return (svc.coberturas||0) === 0 && svc.status === 'pending';
+}
+
 function updateAlerts(){
-  const n = services.filter(s => (s.coberturas||0) === 0 && s.status === 'pending').length;
+  const n = services.filter(hasPendingDays).length;
   const badge   = document.getElementById('bell-badge');
   const bellBtn = document.getElementById('bell-btn');
   if(n > 0){
@@ -1632,8 +1585,8 @@ function updateAlerts(){
 function toggleBalloon(){
   const bal = document.getElementById('alert-balloon');
   if(bal.classList.contains('open')){ closeBalloon(); return; }
-  const urgent = services.filter(s => (s.coberturas||0) === 0 && s.status === 'pending');
-  if(!urgent.length){ showToast('Nenhum serviço sem cobertura! ✓'); return; }
+  const urgent = services.filter(hasPendingDays);
+  if(!urgent.length){ showToast('Nenhum plantão pendente! ✓'); return; }
   document.getElementById('balloon-count').textContent = urgent.length;
   renderBalloon(urgent);
   bal.classList.add('open');
@@ -1647,45 +1600,185 @@ function closeBalloon(){
 
 function renderBalloon(list){
   const fmt = d => d ? new Date(d+'T00:00:00').toLocaleDateString('pt-BR') : '—';
+  const fmtDay = d => {
+    const dt = new Date(d+'T00:00:00');
+    const dias = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+    return dias[dt.getDay()]+' '+fmt(d);
+  };
   const escalaMap = {par:'☀️ Par', impar:'🌙 Ímpar', todo:'✅ Todo'};
-  // Monta opções de supervisores cadastrados
   const supOptions = supervisors.length
-    ? supervisors.map(s => `<option value="${s.name}">${s.name}${s.role?' — '+s.role:''}</option>`).join('')
+    ? supervisors.map(s => '<option value="'+s.name+'">'+s.name+(s.role?' — '+s.role:'')+'</option>').join('')
     : '';
-  document.getElementById('balloon-body').innerHTML = list.map(svc => `
-    <div class="balert-item" id="balert-${svc.id}">
-      <div class="balert-client">${svc.client}</div>
-      <div class="balert-detail">${svc.service} · ${fmt(svc.dateStart)} · ${svc.timeStart}–${svc.timeEnd}</div>
-      <div class="balert-tags">
-        <span class="balert-tag">📍 ${svc.location||'—'}</span>
-        <span class="balert-tag">👥 ${svc.vagas} vaga(s)</span>
-        <span class="balert-tag">💰 R$ ${svc.payCollab.toLocaleString('pt-BR',{minimumFractionDigits:2})} / colab</span>
-        <span class="balert-tag">🔄 Escala: ${escalaMap[svc.escala||'todo']}</span>
-      </div>
-      <div class="balert-sup-wrap">
-        <span class="balert-sup-label">🎖 Supervisor que fez a cobertura *</span>
-        <select class="balert-sup-select" id="sup-cover-${svc.id}" onchange="this.classList.remove('invalid');document.getElementById('sup-cover-err-${svc.id}').style.display='none'">
-          <option value="">Selecione o supervisor…</option>
-          ${supOptions}
-        </select>
-        <div class="balert-sup-err" id="sup-cover-err-${svc.id}">Selecione o supervisor para confirmar</div>
-      </div>
-      <div class="balert-exec-wrap">
-        <span class="balert-exec-label">👷 Quem vai realizar a cobertura *</span>
-        <input class="balert-exec-input" id="exec-cover-${svc.id}" type="text" placeholder="Nome do colaborador…" value="${svc.executor||''}" oninput="this.classList.remove('invalid');document.getElementById('exec-cover-err-${svc.id}').style.display='none'"/>
-        <div class="balert-exec-err" id="exec-cover-err-${svc.id}">Informe quem vai realizar a cobertura</div>
-      </div>
-      <div class="balert-actions">
-        <button class="btn-balert-cover" onclick="quickCover(${svc.id})">✓ Confirmar cobertura</button>
-      </div>
-    </div>`).join('');
+
+  document.getElementById('balloon-body').innerHTML = list.map(svc => {
+    const pendDays = getPendingDays(svc);
+    const totalDias = (svc.dayAssignments||[]).length;
+    const confDias  = (svc.dayAssignments||[]).filter(a=>a.confirmed).length;
+
+    // ── Serviços com dayAssignments: bloco por dia ──
+    let dayBlocks = '';
+    if(svc.dayAssignments && svc.dayAssignments.length){
+      dayBlocks = pendDays.map(a => {
+        const key = svc.id + '_' + a.date;
+        const presetExec = a.executor || '';
+        return '<div class="balert-day-block" id="dayblock-'+key+'" style="background:rgba(0,0,0,.2);border:1px solid rgba(240,165,0,.2);border-radius:8px;padding:10px 11px;margin-bottom:8px">' +
+          '<div style="font-family:\'Rajdhani\',sans-serif;font-size:.72rem;font-weight:700;color:var(--warn);letter-spacing:1px;margin-bottom:8px">📅 '+fmtDay(a.date)+'</div>' +
+          '<div class="balert-sup-wrap">' +
+            '<span class="balert-sup-label">🎖 Supervisor de plantão *</span>' +
+            '<select class="balert-sup-select" id="sup-'+key+'" onchange="this.classList.remove(\'invalid\');document.getElementById(\'sup-err-'+key+'\').style.display=\'none\'">' +
+              '<option value="">Selecione o supervisor…</option>' + supOptions +
+            '</select>' +
+            '<div class="balert-sup-err" id="sup-err-'+key+'">Selecione o supervisor para confirmar</div>' +
+          '</div>' +
+          '<div class="balert-exec-wrap">' +
+            '<span class="balert-exec-label">👷 Quem vai realizar o serviço *</span>' +
+            '<input class="balert-exec-input" id="exec-'+key+'" type="text" placeholder="Nome do colaborador…" value="'+presetExec+'" oninput="this.classList.remove(\'invalid\');document.getElementById(\'exec-err-'+key+'\').style.display=\'none\'"/>' +
+            '<div class="balert-exec-err" id="exec-err-'+key+'">Informe quem vai realizar o serviço</div>' +
+          '</div>' +
+          '<div class="balert-actions">' +
+            '<button class="btn-balert-cover" onclick="confirmDayCover('+svc.id+',\''+a.date+'\')">✓ Confirmar plantão do dia</button>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    } else {
+      // ── Serviços legados (sem dayAssignments): confirmação única ──
+      dayBlocks =
+        '<div class="balert-sup-wrap">' +
+          '<span class="balert-sup-label">🎖 Supervisor que fez a cobertura *</span>' +
+          '<select class="balert-sup-select" id="sup-cover-'+svc.id+'" onchange="this.classList.remove(\'invalid\');document.getElementById(\'sup-cover-err-'+svc.id+'\').style.display=\'none\'">' +
+            '<option value="">Selecione o supervisor…</option>' + supOptions +
+          '</select>' +
+          '<div class="balert-sup-err" id="sup-cover-err-'+svc.id+'">Selecione o supervisor para confirmar</div>' +
+        '</div>' +
+        '<div class="balert-exec-wrap">' +
+          '<span class="balert-exec-label">👷 Quem vai realizar a cobertura *</span>' +
+          '<input class="balert-exec-input" id="exec-cover-'+svc.id+'" type="text" placeholder="Nome do colaborador…" value="'+(svc.executor||'')+'" oninput="this.classList.remove(\'invalid\');document.getElementById(\'exec-cover-err-'+svc.id+'\').style.display=\'none\'"/>' +
+          '<div class="balert-exec-err" id="exec-cover-err-'+svc.id+'">Informe quem vai realizar a cobertura</div>' +
+        '</div>' +
+        '<div class="balert-actions">' +
+          '<button class="btn-balert-cover" onclick="quickCover('+svc.id+')">✓ Confirmar cobertura</button>' +
+        '</div>';
+    }
+
+    const tagDias = totalDias
+      ? '<span class="balert-tag">✅ '+confDias+'/'+totalDias+' dias confirmados</span>'
+      : '';
+
+    return '<div class="balert-item" id="balert-'+svc.id+'">' +
+      '<div class="balert-client">'+svc.client+'</div>' +
+      '<div class="balert-detail">'+svc.service+' · '+fmt(svc.dateStart)+(svc.dateEnd&&svc.dateEnd!==svc.dateStart?' → '+fmt(svc.dateEnd):'')+'  '+svc.timeStart+'–'+svc.timeEnd+'</div>' +
+      '<div class="balert-tags">' +
+        '<span class="balert-tag">📍 '+(svc.location||'—')+'</span>' +
+        '<span class="balert-tag">👥 '+svc.vagas+' vaga(s)</span>' +
+        tagDias +
+        '<span class="balert-tag">🔄 '+escalaMap[svc.escala||'todo']+'</span>' +
+      '</div>' +
+      '<div id="dayblocks-'+svc.id+'">' + dayBlocks + '</div>' +
+    '</div>';
+  }).join('');
+
+  // Restaura valores pré-selecionados nos selects após o innerHTML
+  list.forEach(svc => {
+    getPendingDays(svc).forEach(a => {
+      const key = svc.id + '_' + a.date;
+      const sel = document.getElementById('sup-'+key);
+      if(sel && a.supervisor) sel.value = a.supervisor;
+    });
+  });
 }
 
+// Confirmação de plantão por dia (nova lógica)
+function confirmDayCover(svcId, date){
+  const svc = services.find(s => s.id === svcId);
+  if(!svc) return;
+
+  const key = svcId + '_' + date;
+  const supSel  = document.getElementById('sup-'+key);
+  const supErr  = document.getElementById('sup-err-'+key);
+  const execInp = document.getElementById('exec-'+key);
+  const execErr = document.getElementById('exec-err-'+key);
+
+  const supName  = supSel  ? supSel.value.trim()  : '';
+  const execName = execInp ? execInp.value.trim() : '';
+
+  if(!supName){
+    if(supSel) supSel.classList.add('invalid');
+    if(supErr) supErr.style.display = 'block';
+    return;
+  }
+  if(!execName){
+    if(execInp) execInp.classList.add('invalid');
+    if(execErr) execErr.style.display = 'block';
+    return;
+  }
+
+  // Marca o dia como confirmado no dayAssignments
+  if(!svc.dayAssignments) svc.dayAssignments = [];
+  const entry = svc.dayAssignments.find(a => a.date === date);
+  if(entry){
+    entry.supervisor = supName;
+    entry.executor   = execName;
+    entry.confirmed  = true;
+    entry.confirmedAt = new Date().toLocaleString('pt-BR');
+  } else {
+    svc.dayAssignments.push({ date, supervisor: supName, executor: execName, confirmed: true, confirmedAt: new Date().toLocaleString('pt-BR') });
+  }
+
+  // Registra no coverDetails para compatibilidade
+  if(!svc.coverDetails) svc.coverDetails = [];
+  svc.coverDetails.push({ supervisor: supName, executor: execName, date, ts: new Date().toLocaleString('pt-BR') });
+
+  // Atualiza coberturas e status
+  const totalDias  = svc.dayAssignments.length;
+  const confDias   = svc.dayAssignments.filter(a => a.confirmed).length;
+  svc.coberturas   = confDias;
+  svc.supervisor   = svc.dayAssignments.find(a=>a.supervisor)?.supervisor || supName;
+  svc.executor     = svc.dayAssignments.find(a=>a.executor)?.executor || execName;
+
+  // Verifica se ainda há dias pendentes (hoje ou passados)
+  const stillPending = getPendingDays(svc).filter(a => a.date !== date).length > 0;
+  if(!stillPending && confDias >= totalDias) svc.status = 'done';
+  else if(confDias > 0)                      svc.status = 'partial';
+
+  save();
+  saveToFb('servicos', svc);
+  updateAlerts();
+  renderServices && renderServices();
+
+  const fmt = d => d ? new Date(d+'T00:00:00').toLocaleDateString('pt-BR') : '—';
+  showToast('✓ Plantão de '+fmt(date)+' confirmado! '+execName+' · '+supName);
+
+  // Notificação push
+  const pushTitle = '✅ Plantão confirmado — '+fmt(date);
+  const pushBody  = svc.client+' — '+svc.service+'\n👷 '+execName+' · 🎖 '+supName;
+  if(Notification.permission === 'granted') _pushSend(pushTitle, pushBody, 'svc-day-'+svcId+'-'+date);
+  _fcmSendToAll(pushTitle, pushBody, svcId, true);
+
+  // Remove o bloco do dia confirmado com animação
+  const block = document.getElementById('dayblock-'+key);
+  if(block){
+    block.style.transition = 'opacity .25s,transform .25s';
+    block.style.opacity = '0'; block.style.transform = 'translateX(20px)';
+    setTimeout(() => {
+      block.remove();
+      // Atualiza contador de dias no card
+      const rem = services.filter(hasPendingDays);
+      if(!rem.length){ closeBalloon(); return; }
+      document.getElementById('balloon-count').textContent = rem.length;
+      // Se o serviço não tem mais dias pendentes, remove o card inteiro
+      if(!hasPendingDays(svc)){
+        const card = document.getElementById('balert-'+svcId);
+        if(card){ card.style.opacity='0'; setTimeout(()=>card.remove(), 250); }
+      }
+    }, 280);
+  }
+}
+
+// Legacy quickCover — serviços sem dayAssignments
 function quickCover(id){
   const svc = services.find(s => s.id === id);
   if(!svc || (svc.coberturas||0) >= svc.vagas) return;
 
-  // Valida supervisor selecionado
   const supSel = document.getElementById('sup-cover-'+id);
   const supErr = document.getElementById('sup-cover-err-'+id);
   const supName = supSel ? supSel.value.trim() : '';
@@ -1694,8 +1787,6 @@ function quickCover(id){
     if(supErr) supErr.style.display = 'block';
     return;
   }
-
-  // Valida executor informado
   const execInp = document.getElementById('exec-cover-'+id);
   const execErr = document.getElementById('exec-cover-err-'+id);
   const execName = execInp ? execInp.value.trim() : '';
@@ -1707,7 +1798,6 @@ function quickCover(id){
 
   svc.coberturas = (svc.coberturas||0) + 1;
   svc.status = svc.coberturas >= svc.vagas ? 'done' : 'partial';
-  // Registra supervisor e executor da cobertura
   svc.supervisor = supName;
   svc.executor   = execName;
   if(!svc.coverDetails) svc.coverDetails = [];
@@ -1719,30 +1809,22 @@ function quickCover(id){
   renderServices && renderServices();
   showToast('✓ Cobertura de '+svc.client+' confirmada! Executor: '+execName);
 
-  // Notifica confirmação e verifica se ainda há pendentes
   const fmt = d => d ? new Date(d+'T00:00:00').toLocaleDateString('pt-BR') : '—';
   const restoFaltam = (svc.vagas||1) - svc.coberturas;
+  const confirmTitle = svc.status === 'done' ? '✅ Cobertura confirmada!' : '⚠️ Cobertura parcial';
+  const confirmBody  = svc.status === 'done'
+    ? svc.client+' — '+(svc.service||'')+'\n👷 '+execName+' · 🎖 '+supName+'\n📅 '+fmt(svc.dateStart)
+    : svc.client+' — ainda faltam '+restoFaltam+' vaga(s)\n👷 '+execName+' · 🎖 '+supName;
 
-  const confirmTitle = svc.status === 'done'
-    ? '✅ Cobertura confirmada!'
-    : '⚠️ Cobertura parcial';
-  const confirmBody = svc.status === 'done'
-    ? `${svc.client} — ${svc.service||''}\n👷 ${execName} · 🎖 ${supName}\n📅 ${fmt(svc.dateStart)}`
-    : `${svc.client} — ainda faltam ${restoFaltam} vaga(s)\n👷 ${execName} · 🎖 ${supName}`;
-
-  // Envia localmente (quem está com o app aberto)
-  if (Notification.permission === 'granted') {
-    _pushSend(confirmTitle, confirmBody, 'svc-cover-confirm-' + svc.id);
-  }
-
-  // ✅ Dispara imediatamente para TODOS os dispositivos via FCM
+  if(Notification.permission === 'granted') _pushSend(confirmTitle, confirmBody, 'svc-cover-confirm-'+id);
   _fcmSendToAll(confirmTitle, confirmBody, svc.id, true);
+
   const el = document.getElementById('balert-'+id);
   if(el){
     el.style.transition = 'opacity .25s,transform .25s';
     el.style.opacity = '0'; el.style.transform = 'translateX(20px)';
     setTimeout(()=>{
-      const rem = services.filter(s => (s.coberturas||0) === 0 && s.status === 'pending');
+      const rem = services.filter(hasPendingDays);
       rem.length ? renderBalloon(rem) : closeBalloon();
       document.getElementById('balloon-count').textContent = rem.length;
     }, 280);
@@ -1934,6 +2016,84 @@ function saveClient(){
 }
 
 // ══════════════════════════════════════════
+// PLANTÃO POR DIA — formulário
+// ══════════════════════════════════════════
+function renderPlantaoPorDia(){
+  const wrap = document.getElementById('plantao-por-dia-wrap');
+  const list = document.getElementById('plantao-dias-list');
+  if(!wrap || !list) return;
+
+  if(!calSelectedDates.length){
+    wrap.style.display = 'none';
+    return;
+  }
+
+  const supOptions = supervisors.length
+    ? supervisors.map(s => `<option value="${s.name}">${s.name}${s.role?' — '+s.role:''}</option>`).join('')
+    : '';
+
+  const dias = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  const fmt  = d => { const [y,m,dd] = d.split('-'); return `${dd}/${m}/${y}`; };
+  const fmtDia = d => { const dt = new Date(d+'T00:00:00'); return dias[dt.getDay()]+' '+fmt(d); };
+
+  list.innerHTML = calSelectedDates.map(d => {
+    // Recupera valores já preenchidos
+    const da  = dayAssignments.find(a => a.date === d) || {};
+    return `<div style="background:rgba(0,0,0,.15);border:1px solid rgba(0,200,248,.1);border-radius:8px;padding:9px 11px">
+      <div style="font-family:'Rajdhani',sans-serif;font-size:.72rem;font-weight:700;color:var(--cyan2);margin-bottom:7px">${fmtDia(d)}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+        <select id="form-sup-${d}" onchange="updateDayAssignment('${d}')"
+          style="background:var(--surface2);border:1px solid rgba(0,200,248,.12);border-radius:7px;color:var(--white);font-family:'DM Sans',sans-serif;font-size:12.5px;padding:7px 10px;outline:none;cursor:pointer;-webkit-appearance:none">
+          <option value="">Supervisor…</option>${supOptions}
+        </select>
+        <input id="form-exec-${d}" type="text" placeholder="Executor / Cob." value="${da.executor||''}"
+          oninput="updateDayAssignment('${d}')"
+          style="background:var(--surface2);border:1px solid rgba(0,200,248,.12);border-radius:7px;color:var(--white);font-family:'DM Sans',sans-serif;font-size:12.5px;padding:7px 10px;outline:none"/>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Restaura valores já preenchidos nos selects após innerHTML
+  calSelectedDates.forEach(d => {
+    const da  = dayAssignments.find(a => a.date === d);
+    const sel = document.getElementById('form-sup-'+d);
+    if(sel && da && da.supervisor) sel.value = da.supervisor;
+  });
+
+  wrap.style.display = 'block';
+}
+
+function updateDayAssignment(date){
+  const supVal  = (document.getElementById('form-sup-'+date)?.value  || '').trim();
+  const execVal = (document.getElementById('form-exec-'+date)?.value || '').trim();
+  const idx = dayAssignments.findIndex(a => a.date === date);
+  if(idx >= 0){
+    dayAssignments[idx].supervisor = supVal;
+    dayAssignments[idx].executor   = execVal;
+  } else {
+    dayAssignments.push({ date, supervisor: supVal, executor: execVal, confirmed: false });
+  }
+}
+
+function preencherTodosPlantao(){
+  // Pega o valor do 1º dia preenchido e replica para todos os dias vazios
+  if(!calSelectedDates.length) return;
+  const primeiro = dayAssignments.find(a => a.supervisor);
+  const supVal   = primeiro ? primeiro.supervisor : '';
+  if(!supVal){
+    // Se nenhum foi preenchido, foca o primeiro select
+    const primeiroSel = document.getElementById('form-sup-'+calSelectedDates[0]);
+    if(primeiroSel) primeiroSel.focus();
+    return;
+  }
+  // Aplica supervisor do 1º em todos que estão vazios
+  calSelectedDates.forEach(d => {
+    const sel = document.getElementById('form-sup-'+d);
+    if(sel && !sel.value){ sel.value = supVal; updateDayAssignment(d); }
+  });
+}
+
+// ══════════════════════════════════════════
 // MÁSCARA TELEFONE
 // ══════════════════════════════════════════
 function maskPhone(el){
@@ -2075,9 +2235,11 @@ function resetForm(){
   // Reseta calendário
   calSelectedDates = [];
   dayAssignments   = [];
-  const dap = document.getElementById('day-assignments-panel');
-  if(dap) dap.style.display = 'none';
   calInit();
+  const plantaoWrap = document.getElementById('plantao-por-dia-wrap');
+  if(plantaoWrap) plantaoWrap.style.display = 'none';
+  const plantaoList = document.getElementById('plantao-dias-list');
+  if(plantaoList) plantaoList.innerHTML = '';
   closeAc();
 
   // Fecha todas as gavetas de seção
@@ -2134,6 +2296,10 @@ function validate(){
 document.getElementById('service-form').addEventListener('submit', function(e){
   e.preventDefault();
   if(!validate()) return;
+
+  // Sincroniza valores do formulário de plantão por dia antes de salvar
+  calSelectedDates.forEach(d => updateDayAssignment(d));
+
   const vagas = parseInt(document.getElementById('vagas').value)||1;
   const cond  = document.querySelector('#payment-cond .pill.selected');
   const svc = {
@@ -2153,9 +2319,11 @@ document.getElementById('service-form').addEventListener('submit', function(e){
     timeEnd:      document.getElementById('time-end').value,
     escala:       getEscala(),
     vagas,        coberturas:0, coverObs:'', coverDetails:[],
-    dayAssignments: dayAssignments.map(a => ({date:a.date, supervisor:a.supervisor, executor:a.executor})),
-    supervisor:   (dayAssignments.length && dayAssignments[0].supervisor) ? dayAssignments[0].supervisor : '',
-    executor:     (dayAssignments.length && dayAssignments[0].executor)   ? dayAssignments[0].executor   : '',
+    dayAssignments: dayAssignments.length
+      ? dayAssignments.map(a => ({ ...a, confirmed: false }))
+      : calSelectedDates.map(d => ({ date: d, supervisor: '', executor: '', confirmed: false })),
+    supervisor:   '',
+    executor:     '',
     payCollab:    parseFloat(document.getElementById('pay-collab').value)||0,
     payCollabType:document.getElementById('pay-collab-type').value,
     payObs:       document.getElementById('pay-obs').value.trim(),
@@ -2721,8 +2889,20 @@ function renderServices(){
           <div class="svc-card-val">R$ ${(s.payCollab||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</div>
         </div>
         <div class="svc-card-field" style="grid-column:1/-1">
-          <div class="svc-card-label">👷 Executor</div>
-          <div class="svc-card-val" style="color:${s.executor?'var(--cyan2)':'var(--muted)'}">${s.executor||'<em style="opacity:.5">Não informado</em>'}</div>
+          <div class="svc-card-label">📋 Plantão por Dia</div>
+          <div class="svc-card-val">${
+            (s.dayAssignments && s.dayAssignments.length)
+              ? s.dayAssignments.map(a => {
+                  const [y,m,d2] = a.date.split('-');
+                  const dt = new Date(a.date+'T00:00:00');
+                  const dias = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+                  const dLabel = dias[dt.getDay()]+' '+d2+'/'+m;
+                  const icon = a.confirmed ? '✅' : (a.date <= new Date().toISOString().slice(0,10) ? '🔴' : '⏳');
+                  const execInfo = a.confirmed ? (' · 👷 '+(a.executor||'—')+' · 🎖 '+(a.supervisor||'—')) : '';
+                  return '<span style="display:inline-block;margin:2px 4px 2px 0;font-size:12px">'+icon+' <b>'+dLabel+'</b>'+execInfo+'</span>';
+                }).join('<br>')
+              : (s.executor ? '👷 '+s.executor : '<em style="opacity:.5">Não informado</em>')
+          }</div>
         </div>
       </div>
       <div class="svc-card-bottom">
@@ -3835,16 +4015,77 @@ function checkAndPushAlerts() {
    7. PUSH IMEDIATO ao salvar novo serviço
    ───────────────────────────────────────────── */
 function pushIfUncovered(svc) {
-  if ((svc.coberturas || 0) >= (svc.vagas || 1) || svc.status === 'done' || svc.status === 'partial') return;
+  if (!hasPendingDays(svc)) return;
 
   const fmt = d => d ? new Date(d+'T00:00:00').toLocaleDateString('pt-BR') : '—';
-  const title = '🚨 Novo serviço sem cobertura!';
-  const body = `${svc.service || 'Serviço'} — ${svc.client}\n📅 ${fmt(svc.dateStart)} · ${svc.timeStart||''}–${svc.timeEnd||''}\n📍 ${(svc.location||'—').slice(0, 60)}`;
 
-  // FCM envia para TODOS os dispositivos (incluindo este).
-  // O próprio onMessage do FCM exibe a notificação quando o app está aberto,
-  // então NÃO chamamos _pushSend aqui para evitar duplicação.
-  _fcmSendToAll(title, body, svc.id, true);
+  if(svc.dayAssignments && svc.dayAssignments.length){
+    // Notifica pelo próximo dia a confirmar
+    const pendDays = getPendingDays(svc);
+    const proxDia = pendDays[0];
+    const title = '🚨 Plantão sem confirmação!';
+    const body = svc.client+' — '+(svc.service||'')+'\n📅 '+fmt(proxDia ? proxDia.date : svc.dateStart)+'\n📍 '+(svc.location||'—').slice(0,60);
+    _fcmSendToAll(title, body, svc.id, true);
+  } else {
+    const title = '🚨 Novo serviço sem cobertura!';
+    const body = (svc.service||'Serviço')+' — '+svc.client+'\n📅 '+fmt(svc.dateStart)+' · '+(svc.timeStart||'')+'–'+(svc.timeEnd||'')+'\n📍 '+(svc.location||'—').slice(0,60);
+    _fcmSendToAll(title, body, svc.id, true);
+  }
+}
+
+/* ─────────────────────────────────────────────
+   8. DISPARO MANUAL DE LEMBRETE GERAL
+   ───────────────────────────────────────────── */
+async function dispararAlertaGeral(){
+  const btn  = document.getElementById('btn-broadcast');
+  const spin = document.getElementById('broadcast-spin');
+  if(!btn) return;
+
+  const pendentes = services.filter(hasPendingDays);
+  if(!pendentes.length){
+    showToast('✓ Nenhum plantão pendente para disparar!');
+    return;
+  }
+
+  // UI: loading
+  btn.disabled = true;
+  if(spin) spin.style.display = 'block';
+
+  const fmt = d => d ? new Date(d+'T00:00:00').toLocaleDateString('pt-BR') : '—';
+  let enviados = 0;
+  let erros    = 0;
+
+  for(const svc of pendentes){
+    try {
+      const dias = getPendingDays(svc);
+      // Monta mensagem resumindo todos os dias pendentes do serviço
+      const diasStr = dias.length
+        ? dias.map(a => fmt(a.date)).join(', ')
+        : fmt(svc.dateStart);
+      const title = '⚠️ Plantão pendente — confirme a cobertura';
+      const body  = svc.client + ' — ' + (svc.service||'Serviço') +
+        '\n📅 ' + diasStr +
+        '\n📍 ' + (svc.location||'—').slice(0, 55) +
+        '\n⏰ ' + (svc.timeStart||'') + '–' + (svc.timeEnd||'');
+      await _fcmSendToAll(title, body, svc.id, true);
+      enviados++;
+    } catch(e) {
+      console.warn('[Broadcast] Erro no serviço', svc.id, e);
+      erros++;
+    }
+    // Pequena pausa entre envios para não sobrecarregar a API
+    await new Promise(r => setTimeout(r, 350));
+  }
+
+  // UI: restaura botão
+  btn.disabled = false;
+  if(spin) spin.style.display = 'none';
+
+  const msg = erros
+    ? '⚠️ ' + enviados + ' disparo(s) enviado(s), ' + erros + ' com erro.'
+    : '📣 Lembrete disparado para ' + enviados + ' serviço(s) pendente(s)!';
+  showToast(msg);
+  closeBalloon();
 }
 
 /* ================================================================
